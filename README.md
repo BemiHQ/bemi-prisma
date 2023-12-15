@@ -136,8 +136,10 @@ Connect your PostgreSQL source database on [bemi.io](https://bemi.io) to start i
 
 Once your destination PostgreSQL database has been fully provisioned, you'll see a "Connected" status. You can now test the connection after making database changes in your connected source database:
 
-```sh
-psql -h us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com -p 5432 -U u_9adb30103a55 -d db_9adb30103a55 -c "SELECT primary_key, operation, values, committed_at FROM changes;"
+```
+psql -h us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com \
+  -p 5432 -U u_9adb30103a55 -d db_9adb30103a55 -c \
+  "SELECT primary_key, operation, values, committed_at FROM changes;"
 Password for user u_9adb30103a55:
 
  primary_key | operation |                       values                       |      committed_at
@@ -154,11 +156,9 @@ Password for user u_9adb30103a55:
 
 Lastly, connect to the Bemi PostgreSQL destination database to easily query change data from your application.
 
-To query the read-only historical data, add a new Prisma schema:
+To query the read-only historical data, add a new Prisma schema in `prisma/bemi.prisma`
 
 ```
-// prisma/bemi.prisma
-
 datasource db {
   provider = "postgresql"
   url      =  "postgresql://u_9adb30103a55:password@us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com:5432/db_9adb30103a55"
@@ -224,3 +224,14 @@ Everyone interacting in the Bemi project's codebases, issue trackers, chat rooms
 
 ## Roadmap
 
+- [x] Add PostgreSQL support
+- [ ] Add NodeJS ORM support
+  - [x] TypeORM
+  - [x] Prisma
+  - [ ] Sequelize
+- [ ] Track `TRUNCATE` SQL commands
+- [ ] Selective tracking of tables and fields
+- [ ] Passing application context in background jobs and cascading writes
+- [ ] ORM querying helpers
+- [ ] UI tooling providing intuitive visualization of data changes
+- [ ] Permissions
