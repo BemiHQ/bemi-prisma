@@ -33,7 +33,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         `${QUERIES.UPDATE} ${QUERIES.CONTEXT}`,
       ]);
     })
@@ -49,7 +49,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.SELECT,
         `${QUERIES.DELETE} ${QUERIES.CONTEXT}`,
@@ -66,7 +66,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.UPDATE,
         QUERIES.COMMIT,
@@ -84,7 +84,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.SELECT,
         `${QUERIES.DELETE} ${QUERIES.CONTEXT}`,
@@ -102,7 +102,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.SELECT,
         QUERIES.SELECT,
@@ -119,7 +119,7 @@ describe('PgAdapter', () => {
 
       const query = await callMockedPgAdapater(queries)
 
-      expect(query.mock.calls.map(c => c[0].text)).toStrictEqual([
+      expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.UPDATE,
       ]);
     })

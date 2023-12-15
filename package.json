@@ -39,7 +39,8 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "jest --watch"
   },
   "registry-url": "https://registry.npmjs.org/",
   "tsup": {
