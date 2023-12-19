@@ -6,9 +6,21 @@
   </a>
 
   <p align="center">
-    <a href="https://github.com/BemiHQ/prisma/issues">Report Bug</a>
+    <a href="https://bemi.io">Website</a>
     ·
-    <a href="https://github.com/BemiHQ/prisma/issues">Request Feature</a>
+    <a href="https://docs.bemi.io">Docs</a>
+    ·
+    <a href="https://github.com/BemiHQ/prisma-example">Example</a>
+    ·
+    <a href="https://github.com/BemiHQ/prisma/issues/new">Report Bug</a>
+    ·
+    <a href="https://github.com/BemiHQ/prisma/issues/new">Request Feature</a>
+    ·
+    <a href="https://discord.gg/mXeZ6w2tGf">Discord</a>
+    ·
+    <a href="https://twitter.com/BemiHQ">Twitter</a>
+    ·
+    <a href="https://www.linkedin.com/company/bemihq/about">LinkedIn</a>
   </p>
 </div>
 
@@ -26,16 +38,9 @@ This library is an optional Prisma integration, enabling you to pass application
 
 - [Highlights](#highlights)
 - [Use cases](#use-cases)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Usage](#usage)
-  - [Data change tracking](#data-change-tracking)
-  - [Data change querying](#data-change-querying)
+- [Quickstart](#quickstart)
 - [Architecture overview](#architecture-overview)
 - [License](#license)
-- [Code of Conduct](#code-of-conduct)
-- [Roadmap](#roadmap)
 
 ## Highlights
 
@@ -47,7 +52,7 @@ This library is an optional Prisma integration, enabling you to pass application
 - Scalability with an automatically provisioned cloud infrastructure
 - Full ownership of your data
 
-See [a demo and an example repo](https://github.com/BemiHQ/prisma-example) for Prisma that automatically tracks all changes.
+See [an example repo](https://github.com/BemiHQ/prisma-example) for Prisma that automatically tracks all changes.
 
 ## Use cases
 
@@ -61,55 +66,24 @@ There's a wide range of use cases that Bemi is built for! The tech was initially
 - **Testing:** Rollback or roll-forward to different application test states.
 - **Analyzing Trends:** Gain insights into historical trends and changes for informed decision-making.
 
-## Getting Started
+## Quickstart
 
-### Prerequisites
-
-- PostgreSQL
-- Prisma
-- Express (Fastify support coming soon)
-
-### Installation
-
-1. Install the NPM package
+Install the NPM package
 
 ```sh
 npm install @bemi-db/prisma
 ```
 
-2. Generate a Prisma migration file to add lightweight [PostgreSQL triggers](https://www.postgresql.org/docs/current/plpgsql-trigger.html) for inserting application context into replication logs.
+Enable native [Node.js PostgreSQL adapter](https://github.com/brianc/node-postgres) for your Prisma client by wrapping it into `withPgAdapter`
 
-```sh
-npx bemi migration:create
-```
-
-3. Run the Prisma migration
-
-```sh
-npx prisma prisma migrate dev
-```
-
-### Usage
-
-Enable the new [Prisma driver adapters](https://www.prisma.io/docs/orm/overview/databases/database-drivers) to use a native [PostgreSQL client](https://github.com/brianc/node-postgres) for Node.js by adding the following in your `schema.prisma`:
-
-```
-generator client {
-  previewFeatures = ["driverAdapters"]
-  ...
-}
-```
-
-Enable PostgreSQL adapter for your Prisma client by using `withPgAdapter`:
-
-```js
+```ts
 import { withPgAdapter } from "@bemi-db/prisma";
 import { PrismaClient } from '@prisma/client';
 
 const prisma = withPgAdapter(new PrismaClient());
 ```
 
-Add an [Express](https://expressjs.com/) middleware to pass application context with all underlying data changes within an HTTP request:
+Add an [Express](https://expressjs.com/) middleware to pass application context with automatically tracked database changes
 
 ```ts
 import { setContext } from "@bemi-db/prisma";
@@ -121,82 +95,30 @@ const app = express();
 app.use(
   setContext(prisma, (req: Request) => ({
     // Customizable context
+    userId: req.user?.id,
     apiEndpoint: req.url,
     params: req.body,
-    userId: req.user?.id,
   }))
 );
 ```
 
-### Data change tracking
-
-Connect your PostgreSQL source database on [bemi.io](https://bemi.io) to start ingesting and storing all data changes stitched together with application-specific context. The database connection details can be securely configured through the [dashboard UI](https://dashboard.bemi.io/log-in?ref=prisma) in a few seconds.
-
-![dashboard](images/dashboard.png)
-
-Once your destination PostgreSQL database has been fully provisioned, you'll see a "Connected" status. You can now test the connection after making database changes in your connected source database:
+Make database changes and make sure they're all stored in a table called `changes`
 
 ```
-psql -h us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com \
-  -p 5432 -U u_9adb30103a55 -d db_9adb30103a55 -c \
-  "SELECT primary_key, operation, values, committed_at FROM changes;"
+psql -h us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com -p 5432 -U u_9adb30103a55 -d db_9adb30103a55 -c \
+  'SELECT "primary_key", "table", "operation", "values", "context", "committed_at" FROM changes;'
 Password for user u_9adb30103a55:
 
- primary_key | operation |                       values                       |      committed_at
--------------+-----------+----------------------------------------------------+------------------------
- 26          | CREATE    | {"id": 26, "task": "Sleep", "isCompleted": false}  | 2023-12-11 17:09:09+00
- 27          | CREATE    | {"id": 27, "task": "Eat", "isCompleted": false}    | 2023-12-11 17:09:11+00
- 28          | CREATE    | {"id": 28, "task": "Repeat", "isCompleted": false} | 2023-12-11 17:09:13+00
- 26          | UPDATE    | {"id": 26, "task": "Sleep", "isCompleted": true}   | 2023-12-11 17:09:15+00
- 26          | DELETE    | {}                                                 | 2023-12-11 17:09:34+00
- (5 rows)
+ primary_key | table | operation |                       values                       |                                context                                                         |      committed_at
+-------------+-------+-----------+----------------------------------------------------+------------------------------------------------------------------------------------------------+------------------------
+ 26          | todo  | CREATE    | {"id": 26, "task": "Sleep", "isCompleted": false}  | {"userId": 187234, "apiEndpoint": "/todo", "params": {"task": "Sleep", "isCompleted": false}}  | 2023-12-11 17:09:09+00
+ 27          | todo  | CREATE    | {"id": 27, "task": "Eat", "isCompleted": false}    | {"userId": 187234, "apiEndpoint": "/todo", "params": {"task": "Eat", "isCompleted": false}}    | 2023-12-11 17:09:11+00
+ 28          | todo  | CREATE    | {"id": 28, "task": "Repeat", "isCompleted": false} | {"userId": 187234, "apiEndpoint": "/todo", "params": {"task": "Repeat", "isCompleted": false}} | 2023-12-11 17:09:13+00
+ 26          | todo  | UPDATE    | {"id": 26, "task": "Sleep", "isCompleted": true}   | {"userId": 187234, "apiEndpoint": "/todo/complete", "params": {"id": 26}}                      | 2023-12-11 17:09:15+00
+ 27          | todo  | DELETE    | {}                                                 | {"userId": 187234, "apiEndpoint": "/todo/27", "params": {"id": 27}}                            | 2023-12-11 17:09:18+00
 ```
 
-### Data change querying
-
-Lastly, connect to the Bemi PostgreSQL destination database to easily query change data from your application.
-
-To query the read-only historical data, add a new Prisma schema in `prisma/bemi.prisma`
-
-```
-datasource db {
-  provider = "postgresql"
-  url      =  "postgresql://u_9adb30103a55:password@us-west-1-prod-destination-pool.ctbxbtz4ojdc.us-west-1.rds.amazonaws.com:5432/db_9adb30103a55"
-}
-
-generator client {
-  provider = "prisma-client-js"
-  output   = "./generated/bemi"
-}
-
-model Change {
-  id          String   @id
-  primaryKey  String   @map("primary_key")
-  values      Json
-  metadata    Json
-  database    String
-  schema      String
-  table       String
-  operation   String
-  committedAt DateTime @map("committed_at")
-  @@map("changes")
-}
-```
-
-Generate Prisma client:
-
-```sh
-npx prisma generate --schema prisma/bemi.prisma
-```
-
-Query changes from the destination database:
-
-```tsx
-import { PrismaClient } from '../prisma/generated/bemi'
-
-const bemiPrisma = new PrismaClient()
-await bemiPrisma.change.findMany()
-```
+Check out our [Prisma Docs](https://docs.bemi.io/orms/prisma) for more details.
 
 ## Architecture overview
 
@@ -217,21 +139,3 @@ The cloud solution includes worker ingesters, queues for fault tolerance, and an
 ## License
 
 Distributed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Bemi project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/exAspArk/bemi/blob/master/CODE_OF_CONDUCT.md).
-
-## Roadmap
-
-- [x] Add PostgreSQL support
-- [ ] Add NodeJS ORM support
-  - [x] TypeORM
-  - [x] Prisma
-  - [ ] Sequelize
-- [ ] Track `TRUNCATE` SQL commands
-- [ ] Selective tracking of tables and fields
-- [ ] Passing application context in background jobs and cascading writes
-- [ ] ORM querying helpers
-- [ ] UI tooling providing intuitive visualization of data changes
-- [ ] Permissions
