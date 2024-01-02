@@ -1,8 +1,6 @@
-<!-- PROJECT LOGO -->
-<br />
 <div align="center">
   <a href="https://bemi.io">
-    <img width="1201" alt="bemi-banner" src="images/bemi-banner.png">
+    <img width="1201" alt="bemi-banner" src="https://docs.bemi.io/img/bemi-banner.png">
   </a>
 
   <p align="center">
@@ -10,11 +8,11 @@
     ·
     <a href="https://docs.bemi.io">Docs</a>
     ·
-    <a href="https://github.com/BemiHQ/prisma-example">Example</a>
+    <a href="https://github.com/BemiHQ/bemi-prisma-example">Example</a>
     ·
-    <a href="https://github.com/BemiHQ/prisma/issues/new">Report Bug</a>
+    <a href="https://github.com/BemiHQ/bemi-prisma/issues/new">Report Bug</a>
     ·
-    <a href="https://github.com/BemiHQ/prisma/issues/new">Request Feature</a>
+    <a href="https://github.com/BemiHQ/bemi-prisma/issues/new">Request Feature</a>
     ·
     <a href="https://discord.gg/mXeZ6w2tGf">Discord</a>
     ·
@@ -23,8 +21,6 @@
     <a href="https://www.linkedin.com/company/bemihq/about">LinkedIn</a>
   </p>
 </div>
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Bemi
 
@@ -52,7 +48,7 @@ This library is an optional Prisma integration, enabling you to pass application
 - Scalability with an automatically provisioned cloud infrastructure
 - Full ownership of your data
 
-See [an example repo](https://github.com/BemiHQ/prisma-example) for Prisma that automatically tracks all changes.
+See [an example repo](https://github.com/BemiHQ/bemi-prisma-example) for Prisma that automatically tracks all changes.
 
 ## Use cases
 
@@ -87,7 +83,7 @@ Add an [Express](https://expressjs.com/) middleware to pass application context 
 
 ```ts
 import { setContext } from "@bemi-db/prisma";
-import { Request } from "express";
+import express, { Request } from "express";
 import { prisma } from "./prisma";
 
 const app = express();
@@ -132,10 +128,10 @@ On the application level, this package automatically passes application context 
 
 Bemi workers then stitch the low-level data with the application context and store this information in a structured easily queryable format, as depicted below:
 
-![bemi-architechture](images/architecture.png)
+![bemi-architechture](https://docs.bemi.io/img/architecture.png)
 
 The cloud solution includes worker ingesters, queues for fault tolerance, and an automatically scalable cloud-hosted PostgreSQL. Bemi currently doesn't support a self hosted option, but [contact us](mailto:hi@bemi.io) if this is required.
 
 ## License
 
-Distributed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+Distributed under the terms of the [LGPL-3.0 License](LICENSE). If you need to modify the code, please release it to contribute back to the open-source community.
