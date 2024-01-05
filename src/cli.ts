@@ -32,7 +32,7 @@ BEGIN
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
     EXECUTE format(
-      'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%I
+      'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s
       BEFORE INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW
       EXECUTE FUNCTION _bemi_row_trigger_func()',
       current_tablename, current_tablename
@@ -72,7 +72,7 @@ const generateMigrationFile = async () => {
 
 const program = new Command();
 
-program.name("bemi").description("CLI to Bemi utilities").version("0.1.0");
+program.name("bemi").description("CLI to Bemi utilities").version("0.2.1");
 
 program.
   command("migration:create").
