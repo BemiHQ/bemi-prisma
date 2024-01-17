@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.2](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.1...v0.2.2) - 2024-01-16
+
+- Fix migration generation to work with PostgreSQL versions less than 14
+
 #### [v0.2.1](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.0...v0.2.1) - 2024-01-04
 
 - Fix migration generation to work with table names containing double quotes
