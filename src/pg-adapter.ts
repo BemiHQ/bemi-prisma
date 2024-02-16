@@ -3,6 +3,7 @@ import { Debug, err, ok } from '@prisma/driver-adapter-utils'
 import { logger } from '@prisma/internals'
 import type pg from 'pg'
 
+import { log } from './logger'
 import { fieldToColumnType, UnsupportedNativeDataType } from './conversion'
 
 interface StandardClient extends pg.Pool {
@@ -12,12 +13,27 @@ interface StandardClient extends pg.Pool {
 interface TransactionClient extends pg.PoolClient {
   previousQueries: Query[]
   logQueries: boolean
-  disableAdapterModification: boolean
   readyToExecuteTransaction?: boolean
 }
 
 const debug = Debug('prisma:driver-adapter:pg')
 const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
+
+export const isBemiContext = (sql: string): boolean => {
+  return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
+}
+
+export const isWriteQuery = (sql: string): boolean => {
+  return /(INSERT|UPDATE|DELETE)\s/gi.test(sql)
+}
+
+const isBeginQuery = (sql: string): boolean => {
+  return /^BEGIN($|\s)/gi.test(sql)
+}
+
+const isCommitQuery = (sql: string): boolean => {
+  return /^COMMIT($|\s)/gi.test(sql)
+}
 
 class PgQueryable<ClientT extends StandardClient | TransactionClient> implements Queryable {
   readonly provider = 'postgres'
@@ -73,22 +89,6 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
     return (await this.performIO(query)).map(({ rowCount: rowsAffected }) => rowsAffected ?? 0)
   }
 
-  isBemiContext(sql: string): boolean {
-    return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
-  }
-
-  isWriteQuery(sql: string): boolean {
-    return /(INSERT|UPDATE|DELETE)\s/gi.test(sql)
-  }
-
-  isBeginQuery(sql: string): boolean {
-    return /^BEGIN($|\s)/gi.test(sql)
-  }
-
-  isCommitQuery(sql: string): boolean {
-    return /^COMMIT($|\s)/gi.test(sql)
-  }
-
   /**
    * Run a query against the database, returning the result set.
    * Should the query fail due to a connection error, the connection is
@@ -97,55 +97,53 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
   private async performIO(query: Query, catchingUp = false): Promise<Result<pg.QueryArrayResult<any>>> {
     const { sql, args: values } = query;
     const transactionClient = this.client as TransactionClient
-    const { previousQueries, disableAdapterModification, readyToExecuteTransaction } = transactionClient
+    const { previousQueries, readyToExecuteTransaction } = transactionClient
 
     let text = sql
 
     // Modify the execution
-    if (!disableAdapterModification) {
-      if (this.client.logQueries && !catchingUp && process.env.BEMI_DEBUG) {
-        console.log(`>>     ${sql}`, previousQueries ? previousQueries.length : '')
+    if (this.client.logQueries && !catchingUp) {
+      log('QUERY:', sql, previousQueries ? previousQueries.length : '')
+    }
+
+    // Transaction queries
+    if (previousQueries) {
+      const isContext = isBemiContext(sql)
+      const isWrite = isWriteQuery(sql)
+      const previousContext = previousQueries.find((q) => isBemiContext(q.sql))?.sql
+      text = previousContext && isWrite ? `${sql} ${previousContext}` : sql
+
+      if (!catchingUp) {
+        previousQueries.push(query)
       }
 
-      // Transaction queries
-      if (previousQueries) {
-        const isContext = this.isBemiContext(sql)
-        const isWrite = this.isWriteQuery(sql)
-        const previousContext = previousQueries.find((q) => this.isBemiContext(q.sql))?.sql
-        text = previousContext && isWrite ? `${sql} ${previousContext}` : sql
+      // Skip accumulated queries or catch up and mark the transaction as ready to execute
+      if (!readyToExecuteTransaction) {
+        // Skip accumulated BEGIN
+        if (isBeginQuery(sql) && previousQueries.length === 1) return ok(EMPTY_RESULT)
 
-        if (!catchingUp) {
-          previousQueries.push(query)
-        }
+        // Skip accumulated COMMIT
+        if (isCommitQuery(sql) && previousContext && previousQueries.length === 4) return ok(EMPTY_RESULT)
 
-        // Skip accumulated queries or catch up and mark the transaction as ready to execute
-        if (!readyToExecuteTransaction) {
-          // Skip accumulated BEGIN
-          if (this.isBeginQuery(sql) && previousQueries.length === 1) return ok(EMPTY_RESULT)
-
-          // Skip accumulated COMMIT
-          if (this.isCommitQuery(sql) && previousContext && previousQueries.length === 4) return ok(EMPTY_RESULT)
-
-          // Catch up and continue the entire transaction
-          if (
-            (previousQueries.length === 2 && !isContext) ||
-            (previousQueries.length === 3 && !isWrite)
-          ) {
-            transactionClient.readyToExecuteTransaction = true
-            for(const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
-              await this.performIO(prevQuery as Query, true)
-            }
+        // Catch up and continue the entire transaction
+        if (
+          (previousQueries.length === 2 && !isContext) ||
+          (previousQueries.length === 3 && !isWrite)
+        ) {
+          transactionClient.readyToExecuteTransaction = true
+          for(const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
+            await this.performIO(prevQuery as Query, true)
           }
         }
-
-        // Skip accumulated context
-        if (this.isBemiContext(sql)) return ok(EMPTY_RESULT)
       }
 
-      // Log modified queries
-      if (this.client.logQueries) {
-        logger.log(`${logger.tags['info'] ?? ''}`, text)
-      }
+      // Skip accumulated context
+      if (isBemiContext(sql)) return ok(EMPTY_RESULT)
+    }
+
+    // Log modified queries
+    if (this.client.logQueries) {
+      logger.log(`${logger.tags['info'] ?? ''}`, text)
     }
 
     try {
@@ -196,12 +194,11 @@ export type PrismaPgOptions = {
 
 export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdapter {
   logQueries: boolean
-  disableAdapterModification: boolean
 
   constructor(
     client: pg.Pool,
     private options?: PrismaPgOptions,
-    { logQueries, disableAdapterModification }: { logQueries?: boolean, disableAdapterModification?: boolean } = {}
+    { logQueries }: { logQueries?: boolean } = {}
   ) {
     const standardClient = client as StandardClient
 
@@ -209,7 +206,6 @@ export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdap
     super(standardClient)
 
     this.logQueries = standardClient.logQueries
-    this.disableAdapterModification = disableAdapterModification || false
   }
 
   getConnectionInfo(): Result<any> {
@@ -229,7 +225,6 @@ export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdap
     const connection = await this.client.connect() as TransactionClient
     connection.previousQueries = []
     connection.logQueries = this.logQueries
-    connection.disableAdapterModification = this.disableAdapterModification
     connection.readyToExecuteTransaction = false
 
     return ok(new PgTransaction(connection, options))

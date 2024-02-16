@@ -122,7 +122,7 @@ Bemi is designed to be lightweight and secure. It takes a practical approach to 
 
 Bemi plugs into both the database and application levels, ensuring 100% reliability and a comprehensive understanding of every change.
 
-On the database level, Bemi securely connects to PostgreSQL's [Write-Ahead Log](https://www.postgresql.org/docs/current/wal-intro.html)'s and implements [Change Data Capture](https://en.wikipedia.org/wiki/Change_data_capture). This allows tracking even the changes that get triggered via direct SQL.
+On the database level, Bemi securely connects to PostgreSQL's [Write-Ahead Log](https://www.postgresql.org/docs/current/wal-intro.html) and implements [Change Data Capture](https://en.wikipedia.org/wiki/Change_data_capture). This allows tracking even the changes that get triggered via direct SQL.
 
 On the application level, this package automatically passes application context by using a [Prisma extension](https://www.prisma.io/docs/orm/prisma-client/client-extensions) to the replication logs to enhance the low-level database changes. For example, information about a user who made a change, an API endpoint where the change was triggered, a worker name that automatically triggered database changes, etc.
 
