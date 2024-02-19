@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.3](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.2...v0.2.3) - 2024-02-19
+
+- Allow attaching application context to raw execute queries
+
 #### [v0.2.2](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.1...v0.2.2) - 2024-01-16
 
 - Fix migration generation to work with PostgreSQL versions less than 14
