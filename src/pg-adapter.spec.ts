@@ -1,4 +1,5 @@
-import { PgAdapter } from './pg-adapter'
+import { Client, Pool } from 'pg'
+import { PrismaPg } from './pg-adapter'
 
 const QUERIES = {
   BEGIN: 'BEGIN',
@@ -12,7 +13,7 @@ const QUERIES = {
 const callMockedPgAdapater = async (queries: string[]) => {
   const query = jest.fn(() => Promise.resolve({}))
   const client = { query, previousQueries: [] }
-  const pgAdapter = new PgAdapter(client as any)
+  const pgAdapter = new PrismaPg(client as any)
 
   for(const sql of queries) {
     await pgAdapter['performIO']({ sql, args: [] })
@@ -21,7 +22,7 @@ const callMockedPgAdapater = async (queries: string[]) => {
   return query
 }
 
-describe('PgAdapter', () => {
+describe('PrismaPg', () => {
   describe('performIO with a transaction', () => {
     test('works with context & write operations', async () => {
       const queries = [

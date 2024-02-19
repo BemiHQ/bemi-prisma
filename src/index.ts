@@ -3,7 +3,8 @@ import { bindAdapter } from '@prisma/driver-adapter-utils'
 import { Pool } from "pg";
 import { Request, Response, NextFunction } from "express";
 
-import { PgAdapter, isBemiContext, isWriteQuery } from './pg-adapter';
+import { PrismaPg } from './pg-adapter';
+import { isBemiContext, isWriteQuery } from './pg-utils'
 import { log } from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
@@ -52,7 +53,7 @@ export const withPgAdapter = (originalPrisma: any) => {
 
   const { url } = prisma._engineConfig.inlineDatasources.db
   const pool = new Pool({ connectionString: url.value || process.env[url.fromEnvVar] });
-  const pgAdapter = new PgAdapter(pool, undefined, { logQueries });
+  const pgAdapter = new PrismaPg(pool, undefined, { logQueries });
   prisma._engineConfig.logQueries = false
   prisma._engineConfig.adapter = bindAdapter(pgAdapter);
 

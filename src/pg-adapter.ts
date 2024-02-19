@@ -1,41 +1,37 @@
-import type { ColumnType, DriverAdapter, Query, Queryable, Result, ResultSet, Transaction, TransactionOptions } from '@prisma/driver-adapter-utils'
+/* eslint-disable @typescript-eslint/require-await */
+import type {
+  ColumnType,
+  ConnectionInfo,
+  DriverAdapter,
+  Query,
+  Queryable,
+  Result,
+  ResultSet,
+  Transaction,
+  TransactionOptions,
+} from '@prisma/driver-adapter-utils'
 import { Debug, err, ok } from '@prisma/driver-adapter-utils'
-import { logger } from '@prisma/internals'
-import type pg from 'pg'
+import pg from 'pg'
 
-import { log } from './logger'
-import { fieldToColumnType, UnsupportedNativeDataType } from './conversion'
-
-interface StandardClient extends pg.Pool {
-  logQueries: boolean
-}
-
-interface TransactionClient extends pg.PoolClient {
-  previousQueries: Query[]
-  logQueries: boolean
-  readyToExecuteTransaction?: boolean
-}
+import { fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType } from './conversion'
 
 const debug = Debug('prisma:driver-adapter:pg')
-const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
 
-export const isBemiContext = (sql: string): boolean => {
-  return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
-}
+// PATCH: Import additional things
+import { logger } from '@prisma/internals'
+import { log } from './logger'
+import {
+  StdClient,
+  TransactionClient,
+  EMPTY_RESULT,
+  isBemiContext,
+  isWriteQuery,
+  isBeginQuery,
+  isCommitQuery,
+} from './pg-utils'
+// PATCH: end
 
-export const isWriteQuery = (sql: string): boolean => {
-  return /(INSERT|UPDATE|DELETE)\s/gi.test(sql)
-}
-
-const isBeginQuery = (sql: string): boolean => {
-  return /^BEGIN($|\s)/gi.test(sql)
-}
-
-const isCommitQuery = (sql: string): boolean => {
-  return /^COMMIT($|\s)/gi.test(sql)
-}
-
-class PgQueryable<ClientT extends StandardClient | TransactionClient> implements Queryable {
+class PgQueryable<ClientT extends StdClient | TransactionClient> implements Queryable {
   readonly provider = 'postgres'
 
   constructor(protected readonly client: ClientT) {}
@@ -94,8 +90,38 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
    * Should the query fail due to a connection error, the connection is
    * marked as unhealthy.
    */
+  // PATCH: pass extra argument
   private async performIO(query: Query, catchingUp = false): Promise<Result<pg.QueryArrayResult<any>>> {
-    const { sql, args: values } = query;
+  // PATCH: end
+
+    try {
+      // PATCH: Call compactPerformIOResult
+      const result = await this.compactPerformIOResult(query, catchingUp)
+      // PATCH: end
+      return ok(result)
+    } catch (e) {
+      // PATCH: Fix TypeScript errors
+      const error = e as any
+      debug('Error in performIO: %O', error)
+      if (error && error.code) {
+        return err({
+          kind: 'Postgres',
+          code: error.code,
+          severity: error.severity,
+          message: error.message,
+          detail: error.detail,
+          column: error.column,
+          hint: error.hint,
+        })
+      }
+      // PATCH: end
+      throw error
+    }
+  }
+
+  // PATCH: Remove unnnecessary transactions
+  private async compactPerformIOResult(query: Query, catchingUp: boolean): Promise<pg.QueryResult> {
+    const { sql, args: values } = query
     const transactionClient = this.client as TransactionClient
     const { previousQueries, readyToExecuteTransaction } = transactionClient
 
@@ -120,10 +146,10 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
       // Skip accumulated queries or catch up and mark the transaction as ready to execute
       if (!readyToExecuteTransaction) {
         // Skip accumulated BEGIN
-        if (isBeginQuery(sql) && previousQueries.length === 1) return ok(EMPTY_RESULT)
+        if (isBeginQuery(sql) && previousQueries.length === 1) return EMPTY_RESULT
 
         // Skip accumulated COMMIT
-        if (isCommitQuery(sql) && previousContext && previousQueries.length === 4) return ok(EMPTY_RESULT)
+        if (isCommitQuery(sql) && previousContext && previousQueries.length === 4) return EMPTY_RESULT
 
         // Catch up and continue the entire transaction
         if (
@@ -138,7 +164,7 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
       }
 
       // Skip accumulated context
-      if (isBemiContext(sql)) return ok(EMPTY_RESULT)
+      if (isBemiContext(sql)) return EMPTY_RESULT
     }
 
     // Log modified queries
@@ -146,30 +172,16 @@ class PgQueryable<ClientT extends StandardClient | TransactionClient> implements
       logger.log(`${logger.tags['info'] ?? ''}`, text)
     }
 
-    try {
-      const result = await this.client.query({ text, values, rowMode: 'array' })
-      return ok(result)
-    } catch (e) {
-      const error = e as any
-      debug('Error in performIO: %O', error)
-      if (error && error.code) {
-        return err({
-          kind: 'Postgres',
-          code: error.code,
-          severity: error.severity,
-          message: error.message,
-          detail: error.detail,
-          column: error.column,
-          hint: error.hint,
-        })
-      }
-      throw error
-    }
+    const result = await this.client.query({ text, values: fixArrayBufferValues(values), rowMode: 'array' })
+    return result
   }
+  // PATCH: end
 }
 
 class PgTransaction extends PgQueryable<TransactionClient> implements Transaction {
+  // PATCH: Fix TypeScript errors
   constructor(client: TransactionClient, readonly options: TransactionOptions) {
+  // PATCH: end
     super(client)
   }
 
@@ -192,7 +204,8 @@ export type PrismaPgOptions = {
   schema?: string
 }
 
-export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdapter {
+export class PrismaPg extends PgQueryable<StdClient> implements DriverAdapter {
+  // PATCH: Add logQueries
   logQueries: boolean
 
   constructor(
@@ -200,15 +213,27 @@ export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdap
     private options?: PrismaPgOptions,
     { logQueries }: { logQueries?: boolean } = {}
   ) {
-    const standardClient = client as StandardClient
+  // PATCH: end
 
+    // PATCH: Ignore type checking
+    if (false) {
+    // PATCH: end
+      throw new TypeError(`PrismaPg must be initialized with an instance of Pool:
+import { Pool } from 'pg'
+const pool = new Pool({ connectionString: url })
+const adapter = new PrismaPg(pool)
+`)
+    }
+
+    // PATCH: Add logQueries
+    const standardClient = client as StdClient
     standardClient.logQueries = logQueries || false
     super(standardClient)
-
     this.logQueries = standardClient.logQueries
+    // PATCH: end
   }
 
-  getConnectionInfo(): Result<any> {
+  getConnectionInfo(): Result<ConnectionInfo> {
     return ok({
       schemaName: this.options?.schema,
     })
@@ -222,10 +247,12 @@ export class PgAdapter extends PgQueryable<StandardClient> implements DriverAdap
     const tag = '[js::startTransaction]'
     debug(`${tag} options: %O`, options)
 
+    // PATCH: Customize connection
     const connection = await this.client.connect() as TransactionClient
     connection.previousQueries = []
     connection.logQueries = this.logQueries
     connection.readyToExecuteTransaction = false
+    // PATCH: end
 
     return ok(new PgTransaction(connection, options))
   }
