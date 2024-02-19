@@ -9,7 +9,6 @@ import { log } from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
 const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
-
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 
 export const withPgAdapter = (originalPrisma: any) => {
@@ -17,7 +16,7 @@ export const withPgAdapter = (originalPrisma: any) => {
 
   const prisma = originalPrisma.$extends({
     query: {
-      async $allOperations({ model, args, query, operation }: any) {
+      async $allOperations({ args, query, operation }: any) {
         // Not contextualizable query
         if (
           !WRITE_OPERATIONS.includes(operation) &&
@@ -60,7 +59,7 @@ export const withPgAdapter = (originalPrisma: any) => {
   return prisma
 }
 
-export const setContext = (prisma: any, callback: (req: Request) => any) => {
+export const setContext = (callback: (req: Request) => any) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     const context = callback(req);
 
@@ -69,3 +68,12 @@ export const setContext = (prisma: any, callback: (req: Request) => any) => {
     });
   };
 };
+
+export const BemiApolloServerPlugin = (callback: (requestContext: any) => any) => {
+  return {
+    async requestDidStart(requestContext: any) {
+      const context = callback(requestContext);
+      ASYNC_LOCAL_STORAGE.enterWith(context);
+    },
+  }
+}

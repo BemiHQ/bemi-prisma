@@ -7,7 +7,7 @@ const QUERIES = {
   SELECT: 'SELECT "Todo"."Todo"."id", "Todo"."Todo"."task", "Todo"."Todo"."isCompleted" FROM "Todo"."Todo" WHERE "Todo"."Todo"."id" = $1 OFFSET $2',
   UPDATE: 'UPDATE "Todo"."Todo" SET "isCompleted" = $1 WHERE ("Todo"."Todo"."id" = $2 AND 1=1) RETURNING "Todo"."Todo"."id", "Todo"."Todo"."task", "Todo"."Todo"."isCompleted"',
   DELETE: 'DELETE FROM "Todo"."Todo" WHERE ("Todo"."Todo"."id" = $1 AND 1=1)',
-  CONTEXT: '/*Bemi {"apiEndpoint":"/todo/complete","userID":1,"queryParams":{"id":37}} Bemi*/',
+  CONTEXT: '/*Bemi {"endpoint":"/todo/complete","userID":1,"queryParams":{"id":37}} Bemi*/',
 }
 
 const callMockedPgAdapater = async (queries: string[]) => {
