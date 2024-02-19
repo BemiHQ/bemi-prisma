@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.4](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.3...v0.2.4) - 2024-02-19
+
+- Make it compatible with the latest Prisma v5.9.1
+
 #### [v0.2.3](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.2...v0.2.3) - 2024-02-19
 
 - Allow attaching application context to raw execute queries
