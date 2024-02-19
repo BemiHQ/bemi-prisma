@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.5](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.4...v0.2.5) - 2024-02-19
+
+- Add `BemiApolloServerPlugin`
+
 #### [v0.2.4](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.3...v0.2.4) - 2024-02-19
 
 - Make it compatible with the latest Prisma v5.9.1
