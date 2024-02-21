@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.6](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.5...v0.2.6) - 2024-02-21
+
+- Reuse the Prisma client type when wrapping it by using `withPgAdapter`
+
 #### [v0.2.5](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.4...v0.2.5) - 2024-02-19
 
 - Add `BemiApolloServerPlugin`
