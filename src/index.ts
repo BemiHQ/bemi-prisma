@@ -11,10 +11,10 @@ const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", 
 const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 
-export const withPgAdapter = (originalPrisma: any) => {
-  const { logQueries } = originalPrisma._engineConfig
+export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType): PrismaClientType => {
+  const { logQueries } = (originalPrisma as any)._engineConfig
 
-  const prisma = originalPrisma.$extends({
+  const prisma = (originalPrisma as any).$extends({
     query: {
       async $allOperations({ args, query, operation }: any) {
         // Not contextualizable query
@@ -56,7 +56,7 @@ export const withPgAdapter = (originalPrisma: any) => {
   prisma._engineConfig.logQueries = false
   prisma._engineConfig.adapter = bindAdapter(pgAdapter);
 
-  return prisma
+  return prisma as PrismaClientType
 }
 
 export const setContext = (callback: (req: Request) => any) => {
