@@ -59,6 +59,7 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
   return prisma as PrismaClientType
 }
 
+// Next.js
 export const setContext = (callback: (req: Request) => any) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     const context = callback(req);
@@ -69,6 +70,7 @@ export const setContext = (callback: (req: Request) => any) => {
   };
 };
 
+// Apollo Server
 export const BemiApolloServerPlugin = (callback: (requestContext: any) => any) => {
   return {
     async requestDidStart(requestContext: any) {
@@ -76,4 +78,9 @@ export const BemiApolloServerPlugin = (callback: (requestContext: any) => any) =
       ASYNC_LOCAL_STORAGE.enterWith(context);
     },
   }
+}
+
+// Other
+export const bemiContext = (context: any) => {
+  ASYNC_LOCAL_STORAGE.enterWith(context);
 }
