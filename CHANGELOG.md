@@ -1,5 +1,10 @@
 # Changelog
 
+#### [v0.2.7](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.6...v0.2.7) - 2024-02-29
+
+- Add `bemiContext` function for inline context setting
+- Delete `express` from peer dependencies
+
 #### [v0.2.6](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.5...v0.2.6) - 2024-02-21
 
 - Reuse the Prisma client type when wrapping it by using `withPgAdapter`
