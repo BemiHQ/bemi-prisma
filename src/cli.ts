@@ -27,31 +27,16 @@ CREATE OR REPLACE PROCEDURE _bemi_create_triggers()
 AS $$
 DECLARE
   current_tablename TEXT;
-  pg_major_version INT;
 BEGIN
-  pg_major_version := (SELECT SPLIT_PART(setting, '.', 1)::INT FROM pg_settings WHERE name = 'server_version');
   FOR current_tablename IN
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
-    IF (pg_major_version >= 14) THEN
-      EXECUTE format(
-        'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s
-        BEFORE INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW
-        EXECUTE FUNCTION _bemi_row_trigger_func()',
-        current_tablename, current_tablename
-      );
-    ELSE
-      EXECUTE format(
-        'DROP TRIGGER IF EXISTS _bemi_row_trigger_%s ON %I',
-        current_tablename, current_tablename
-      );
-      EXECUTE format(
-        'CREATE TRIGGER _bemi_row_trigger_%s
-        BEFORE INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW
-        EXECUTE FUNCTION _bemi_row_trigger_func()',
-        current_tablename, current_tablename
-      );
-    END IF;
+    EXECUTE format(
+      'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s
+      BEFORE INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW
+      EXECUTE FUNCTION _bemi_row_trigger_func()',
+      current_tablename, current_tablename
+    );
   END LOOP;
 END;
 $$ LANGUAGE plpgsql;
