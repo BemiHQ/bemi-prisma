@@ -56,6 +56,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CALL _bemi_create_triggers();
+
 CREATE OR REPLACE FUNCTION _bemi_create_table_trigger_func()
   RETURNS event_trigger
 AS $$
@@ -64,13 +66,14 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-DROP EVENT TRIGGER IF EXISTS _bemi_create_table_trigger;
-
-CREATE EVENT TRIGGER _bemi_create_table_trigger
-ON ddl_command_end WHEN TAG IN ('CREATE TABLE')
-EXECUTE FUNCTION _bemi_create_table_trigger_func();
-
-CALL _bemi_create_triggers();
+DO $$
+BEGIN
+  DROP EVENT TRIGGER IF EXISTS _bemi_create_table_trigger;
+  CREATE EVENT TRIGGER _bemi_create_table_trigger ON ddl_command_end WHEN TAG IN ('CREATE TABLE') EXECUTE FUNCTION _bemi_create_table_trigger_func();
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'Please execute "CALL _bemi_create_triggers();" manually after adding new tables you want to track. (%) %.', SQLSTATE, SQLERRM;
+END
+$$ LANGUAGE plpgsql;
 `
 
 const generateMigrationFile = async () => {
