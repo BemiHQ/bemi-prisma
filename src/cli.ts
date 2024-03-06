@@ -90,7 +90,7 @@ const generateMigrationFile = async () => {
 
 const program = new Command();
 
-program.name("bemi").description("CLI to Bemi utilities").version("0.2.7");
+program.name("bemi").description("CLI to Bemi utilities").version("0.2.8");
 
 program.
   command("migration:create").

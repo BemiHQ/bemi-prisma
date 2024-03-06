@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.2.8](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.7...v0.2.8) - 2024-03-05
+
+- Don't crash in the migration when executing it with Supabase
+
 #### [v0.2.7](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.6...v0.2.7) - 2024-02-29
 
 - Add `bemiContext` function for inline context setting
