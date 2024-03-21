@@ -24,7 +24,7 @@
 
 # Bemi Prisma
 
-[Bemi](https://bemi.io) plugs into [Prisma](https://github.com/prisma/prisma) and PostgreSQL to track database changes automatically. It unlocks robust context-aware audit trails and time travel querying inside your application.
+[Bemi](https://bemi.io) plugs into [Prisma](https://github.com/prisma/prisma) and your existing PostgreSQL database to track data changes automatically. It unlocks robust context-aware audit trails and time travel querying inside your application.
 
 Designed with simplicity and non-invasiveness in mind, Bemi doesn't require any alterations to your existing database structure. It operates in the background, empowering you with data change tracking features.
 
