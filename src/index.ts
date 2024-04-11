@@ -35,7 +35,7 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
 
         // There is no context
         const context = ASYNC_LOCAL_STORAGE.getStore()
-        if (!context) return query(args)
+        if (!context || context.constructor !== Object) return query(args)
 
         log('EXTENSION:', operation, args)
 
