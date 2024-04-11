@@ -1,6 +1,6 @@
 {
   "name": "@bemi-db/prisma",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "Automatic data change tracking for Prisma",
   "main": "dist/index.js",
   "module": "./dist/index.mjs",
@@ -9,9 +9,12 @@
     "dist"
   ],
   "bin": {
-    "bemi": "./dist/cli.js"
+    "bemi": "dist/cli.js"
   },
-  "repository": "git://github.com/BemiHQ/bemi-prisma.git",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/BemiHQ/bemi-prisma.git"
+  },
   "author": "",
   "license": "LGPL-3.0",
   "bugs": {

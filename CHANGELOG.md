@@ -1,5 +1,12 @@
 # Changelog
 
+#### [v0.3.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.8...v0.3.0) - 2024-04-11
+
+- Automatically include an original SQL query in application context
+- Pass application context only if it's an object
+- Sync the pg adapter against the latest Prisma pg adapter version
+- Drop support for PostgreSQL version 13 and older
+
 #### [v0.2.8](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.7...v0.2.8) - 2024-03-05
 
 - Don't crash in the migration when executing it with Supabase
