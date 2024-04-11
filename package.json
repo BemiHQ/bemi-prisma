@@ -22,7 +22,7 @@
     "@prisma/driver-adapter-utils": "^5.9.1",
     "@prisma/internals": "^5.9.1",
     "commander": "^11.1.0",
-    "pg": "^8.11.3",
+    "pg": "^8.11.5",
     "postgres-array": "^3.0.2"
   },
   "peerDependencies": {

@@ -11,6 +11,7 @@ import type {
   TransactionOptions,
 } from '@prisma/driver-adapter-utils'
 import { Debug, err, ok } from '@prisma/driver-adapter-utils'
+// @ts-ignore: this is used to avoid the `Module '"<path>/node_modules/@types/pg/index"' has no default export.` error.
 import pg from 'pg'
 
 import { fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType } from './conversion'
@@ -31,8 +32,10 @@ import {
 } from './pg-utils'
 // PATCH: end
 
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 class PgQueryable<ClientT extends StdClient | TransactionClient> implements Queryable {
   readonly provider = 'postgres'
+  readonly adapterName = '@prisma/adapter-pg'
 
   constructor(protected readonly client: ClientT) {}
 
@@ -99,22 +102,22 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       const result = await this.compactPerformIOResult(query, catchingUp)
       // PATCH: end
       return ok(result)
-    } catch (e) {
-      // PATCH: Fix TypeScript errors
-      const error = e as any
+    // PATCH: Fix TypeScript errors
+    } catch (e: any) {
+    // PATCH: end
+      const error = e as Error
       debug('Error in performIO: %O', error)
-      if (error && error.code) {
+      if (e && typeof e.code === 'string' && typeof e.severity === 'string' && typeof e.message === 'string') {
         return err({
           kind: 'Postgres',
-          code: error.code,
-          severity: error.severity,
-          message: error.message,
-          detail: error.detail,
-          column: error.column,
-          hint: error.hint,
+          code: e.code,
+          severity: e.severity,
+          message: e.message,
+          detail: e.detail,
+          column: e.column,
+          hint: e.hint,
         })
       }
-      // PATCH: end
       throw error
     }
   }
