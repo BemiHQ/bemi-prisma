@@ -1,5 +1,11 @@
-import { Client, Pool } from 'pg'
 import { PrismaPg } from './pg-adapter'
+import { contextToSqlComment } from './pg-utils'
+
+const CONTEXT = {
+  endpoint: '/todo/complete',
+  userID: 1,
+  queryParams: { id: 37 },
+}
 
 const QUERIES = {
   BEGIN: 'BEGIN',
@@ -7,7 +13,7 @@ const QUERIES = {
   SELECT: 'SELECT "Todo"."Todo"."id", "Todo"."Todo"."task", "Todo"."Todo"."isCompleted" FROM "Todo"."Todo" WHERE "Todo"."Todo"."id" = $1 OFFSET $2',
   UPDATE: 'UPDATE "Todo"."Todo" SET "isCompleted" = $1 WHERE ("Todo"."Todo"."id" = $2 AND 1=1) RETURNING "Todo"."Todo"."id", "Todo"."Todo"."task", "Todo"."Todo"."isCompleted"',
   DELETE: 'DELETE FROM "Todo"."Todo" WHERE ("Todo"."Todo"."id" = $1 AND 1=1)',
-  CONTEXT: '/*Bemi {"endpoint":"/todo/complete","userID":1,"queryParams":{"id":37}} Bemi*/',
+  CONTEXT: contextToSqlComment(CONTEXT),
 }
 
 const callMockedPgAdapater = async (queries: string[]) => {
@@ -20,6 +26,10 @@ const callMockedPgAdapater = async (queries: string[]) => {
   }
 
   return query
+}
+
+const queryWithContext = (query: string) => {
+  return `${query} ${contextToSqlComment({ SQL: query, ...CONTEXT })}`
 }
 
 describe('PrismaPg', () => {
@@ -35,7 +45,7 @@ describe('PrismaPg', () => {
       const query = await callMockedPgAdapater(queries)
 
       expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
-        `${QUERIES.UPDATE} ${QUERIES.CONTEXT}`,
+        queryWithContext(QUERIES.UPDATE),
       ]);
     })
 
@@ -53,7 +63,7 @@ describe('PrismaPg', () => {
       expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.SELECT,
-        `${QUERIES.DELETE} ${QUERIES.CONTEXT}`,
+        queryWithContext(QUERIES.DELETE),
         QUERIES.COMMIT,
       ]);
     })
@@ -88,7 +98,7 @@ describe('PrismaPg', () => {
       expect(query.mock.calls.map((c: any) => c[0].text)).toStrictEqual([
         QUERIES.BEGIN,
         QUERIES.SELECT,
-        `${QUERIES.DELETE} ${QUERIES.CONTEXT}`,
+        queryWithContext(QUERIES.DELETE),
         QUERIES.COMMIT,
       ]);
     })

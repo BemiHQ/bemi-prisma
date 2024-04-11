@@ -25,7 +25,9 @@ import {
   StdClient,
   TransactionClient,
   EMPTY_RESULT,
-  isBemiContext,
+  contextToSqlComment,
+  sqlCommentToContext,
+  isContextComment,
   isWriteQuery,
   isBeginQuery,
   isCommitQuery,
@@ -137,10 +139,13 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
 
     // Transaction queries
     if (previousQueries) {
-      const isContext = isBemiContext(sql)
+      const isContext = isContextComment(sql)
       const isWrite = isWriteQuery(sql)
-      const previousContext = previousQueries.find((q) => isBemiContext(q.sql))?.sql
-      text = previousContext && isWrite ? `${sql} ${previousContext}` : sql
+      const previousContextComment = previousQueries.find((q) => isContextComment(q.sql))?.sql
+
+      if (previousContextComment && isWrite) {
+        text = `${sql} ${contextToSqlComment({ SQL: sql, ...sqlCommentToContext(previousContextComment) })}`
+      }
 
       if (!catchingUp) {
         previousQueries.push(query)
@@ -152,7 +157,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
         if (isBeginQuery(sql) && previousQueries.length === 1) return EMPTY_RESULT
 
         // Skip accumulated COMMIT
-        if (isCommitQuery(sql) && previousContext && previousQueries.length === 4) return EMPTY_RESULT
+        if (isCommitQuery(sql) && previousContextComment && previousQueries.length === 4) return EMPTY_RESULT
 
         // Catch up and continue the entire transaction
         if (
@@ -167,7 +172,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       }
 
       // Skip accumulated context
-      if (isBemiContext(sql)) return EMPTY_RESULT
+      if (isContextComment(sql)) return EMPTY_RESULT
     }
 
     // Log modified queries

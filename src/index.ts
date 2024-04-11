@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import { Request, Response, NextFunction } from "express";
 
 import { PrismaPg } from './pg-adapter';
-import { isBemiContext, isWriteQuery } from './pg-utils'
+import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
 import { log } from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
@@ -29,7 +29,7 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
         }
 
         // Injected context query
-        if (operation === '$executeRawUnsafe' && args[0] && isBemiContext(args[0])) {
+        if (operation === '$executeRawUnsafe' && args[0] && isContextComment(args[0])) {
           return query(args)
         }
 
@@ -42,7 +42,7 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
         // The PG adapter will remove the transaction and add the comment
         // to the query directly to be executed as a single SQL statement
         const [, result] = await prisma.$transaction([
-          prisma.$executeRawUnsafe(`/*Bemi ${JSON.stringify(context)} Bemi*/`),
+          prisma.$executeRawUnsafe(contextToSqlComment(context)),
           query(args),
         ]);
         return result

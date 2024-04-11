@@ -13,7 +13,15 @@ export interface TransactionClient extends pg.PoolClient {
 
 export const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
 
-export const isBemiContext = (sql: string): boolean => {
+export const contextToSqlComment = (context: any): string => {
+  return `/*Bemi ${JSON.stringify(context)} Bemi*/`
+}
+
+export const sqlCommentToContext = (sql: string): any => {
+  return JSON.parse(sql.replace('/*Bemi ', '').replace(' Bemi*/', ''))
+}
+
+export const isContextComment = (sql: string): boolean => {
   return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
 }
 
