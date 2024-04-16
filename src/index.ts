@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
 
 import { PrismaPg } from './pg-adapter';
 import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
-import { log } from './logger'
+import { logger } from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
 const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
@@ -37,7 +37,7 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
         const context = ASYNC_LOCAL_STORAGE.getStore()
         if (!context || context.constructor !== Object) return query(args)
 
-        log('EXTENSION:', operation, args)
+        logger.debug('EXTENSION:', operation, args)
 
         // The PG adapter will remove the transaction and add the comment
         // to the query directly to be executed as a single SQL statement

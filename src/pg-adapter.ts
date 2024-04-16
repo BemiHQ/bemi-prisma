@@ -19,8 +19,7 @@ import { fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType } fr
 const debug = Debug('prisma:driver-adapter:pg')
 
 // PATCH: Import additional things
-import { logger } from '@prisma/internals'
-import { log } from './logger'
+import { logger } from './logger'
 import {
   StdClient,
   TransactionClient,
@@ -134,7 +133,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
 
     // Modify the execution
     if (this.client.logQueries && !catchingUp) {
-      log('QUERY:', sql, previousQueries ? previousQueries.length : '')
+      logger.debug('QUERY:', sql, previousQueries ? previousQueries.length : '')
     }
 
     // Transaction queries
