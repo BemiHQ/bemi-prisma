@@ -1,5 +1,10 @@
 # Changelog
 
+#### [v0.4.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.3.0...v0.4.0) - 2024-04-16
+
+- Fix Next.js actions by removing `@prisma/internals` as a dependency
+- Validate context size to make sure it is under 1MB
+
 #### [v0.3.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.2.8...v0.3.0) - 2024-04-11
 
 - Automatically include an original SQL query in application context
