@@ -10,6 +10,7 @@ import { logger } from './logger'
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
 const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
+const MAX_CONTEXT_SIZE = 1000000 // ~ 1MB
 
 export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType): PrismaClientType => {
   const { logQueries } = (originalPrisma as any)._engineConfig
@@ -33,16 +34,19 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
           return query(args)
         }
 
-        // There is no context
+        // There is no context or it's not an object
         const context = ASYNC_LOCAL_STORAGE.getStore()
         if (!context || context.constructor !== Object) return query(args)
 
-        logger.debug('EXTENSION:', operation, args)
+        // Context is too large
+        const contextComment = contextToSqlComment(context)
+        if (contextComment.length > MAX_CONTEXT_SIZE) return query(args)
 
+        logger.debug('EXTENSION:', operation, args)
         // The PG adapter will remove the transaction and add the comment
         // to the query directly to be executed as a single SQL statement
         const [, result] = await prisma.$transaction([
-          prisma.$executeRawUnsafe(contextToSqlComment(context)),
+          prisma.$executeRawUnsafe(contextComment),
           query(args),
         ]);
         return result
