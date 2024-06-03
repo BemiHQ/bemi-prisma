@@ -26,7 +26,7 @@ export const isContextComment = (sql: string): boolean => {
 }
 
 export const isWriteQuery = (sql: string): boolean => {
-  return /(INSERT|UPDATE|DELETE)\s/gi.test(sql)
+  return /(INSERT|UPDATE|DELETE)\s/i.test(sql)
 }
 
 export const isBeginQuery = (sql: string): boolean => {

@@ -29,7 +29,10 @@ DECLARE
   current_tablename TEXT;
 BEGIN
   FOR current_tablename IN
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    SELECT tablename FROM pg_tables
+    LEFT JOIN information_schema.triggers ON tablename = event_object_table AND schemaname = trigger_schema AND trigger_name LIKE '_bemi_row_trigger_%'
+    WHERE schemaname = 'public' AND trigger_name IS NULL
+    GROUP BY tablename
   LOOP
     EXECUTE format(
       'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s
