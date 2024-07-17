@@ -10,27 +10,27 @@ import type {
   Transaction,
   TransactionOptions,
 } from '@prisma/driver-adapter-utils'
-import { Debug, err, ok } from '@prisma/driver-adapter-utils'
+import {Debug, err, ok} from '@prisma/driver-adapter-utils'
 // @ts-ignore: this is used to avoid the `Module '"<path>/node_modules/@types/pg/index"' has no default export.` error.
 import pg from 'pg'
 
-import { fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType } from './conversion'
+import {fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType} from './conversion'
+// PATCH: Import additional things
+import {logger} from './logger'
+import {
+  contextToSqlComment,
+  EMPTY_RESULT,
+  isBeginQuery,
+  isCommitQuery,
+  isContextComment,
+  isWriteQuery,
+  sqlCommentToContext,
+  StdClient,
+  TransactionClient,
+} from './pg-utils'
 
 const debug = Debug('prisma:driver-adapter:pg')
 
-// PATCH: Import additional things
-import { logger } from './logger'
-import {
-  StdClient,
-  TransactionClient,
-  EMPTY_RESULT,
-  contextToSqlComment,
-  sqlCommentToContext,
-  isContextComment,
-  isWriteQuery,
-  isBeginQuery,
-  isCommitQuery,
-} from './pg-utils'
 // PATCH: end
 
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -38,7 +38,8 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
   readonly provider = 'postgres'
   readonly adapterName = '@prisma/adapter-pg'
 
-  constructor(protected readonly client: ClientT) {}
+  constructor(protected readonly client: ClientT) {
+  }
 
   /**
    * Execute a query given as SQL, interpolating the given parameters.
@@ -53,7 +54,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       return err(res.error)
     }
 
-    const { fields, rows } = res.value
+    const {fields, rows} = res.value
     const columnNames = fields.map((field) => field.name)
     let columnTypes: ColumnType[] = []
 
@@ -86,7 +87,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
     debug(`${tag} %O`, query)
 
     // Note: `rowsAffected` can sometimes be null (e.g., when executing `"BEGIN"`)
-    return (await this.performIO(query)).map(({ rowCount: rowsAffected }) => rowsAffected ?? 0)
+    return (await this.performIO(query)).map(({rowCount: rowsAffected}) => rowsAffected ?? 0)
   }
 
   /**
@@ -96,16 +97,16 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
    */
   // PATCH: pass extra argument
   private async performIO(query: Query, catchingUp = false): Promise<Result<pg.QueryArrayResult<any>>> {
-  // PATCH: end
+    // PATCH: end
 
     try {
       // PATCH: Call compactPerformIOResult
       const result = await this.compactPerformIOResult(query, catchingUp)
       // PATCH: end
       return ok(result)
-    // PATCH: Fix TypeScript errors
+      // PATCH: Fix TypeScript errors
     } catch (e: any) {
-    // PATCH: end
+      // PATCH: end
       const error = e as Error
       debug('Error in performIO: %O', error)
       if (e && typeof e.code === 'string' && typeof e.severity === 'string' && typeof e.message === 'string') {
@@ -123,11 +124,11 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
     }
   }
 
-  // PATCH: Remove unnnecessary transactions
+  // PATCH: Remove unnecessary transactions
   private async compactPerformIOResult(query: Query, catchingUp: boolean): Promise<pg.QueryResult> {
-    const { sql, args: values } = query
+    const {sql, args: values} = query
     const transactionClient = this.client as TransactionClient
-    const { previousQueries, readyToExecuteTransaction } = transactionClient
+    const {previousQueries, readyToExecuteTransaction} = transactionClient
 
     let text = sql
 
@@ -143,7 +144,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       const previousContextComment = previousQueries.find((q) => isContextComment(q.sql))?.sql
 
       if (previousContextComment && isWrite) {
-        text = `${sql} ${contextToSqlComment({ SQL: sql, ...sqlCommentToContext(previousContextComment) })}`
+        text = `${sql} ${contextToSqlComment({SQL: sql, ...sqlCommentToContext(previousContextComment)})}`
       }
 
       if (!catchingUp) {
@@ -164,7 +165,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
           (previousQueries.length === 3 && !isWrite)
         ) {
           transactionClient.readyToExecuteTransaction = true
-          for(const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
+          for (const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
             await this.performIO(prevQuery as Query, true)
           }
         }
@@ -179,16 +180,17 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       logger.log(`${logger.tags['info'] ?? ''}`, text)
     }
 
-    const result = await this.client.query({ text, values: fixArrayBufferValues(values), rowMode: 'array' })
+    const result = await this.client.query({text, values: fixArrayBufferValues(values), rowMode: 'array'})
     return result
   }
+
   // PATCH: end
 }
 
 class PgTransaction extends PgQueryable<TransactionClient> implements Transaction {
   // PATCH: Fix TypeScript errors
   constructor(client: TransactionClient, readonly options: TransactionOptions) {
-  // PATCH: end
+    // PATCH: end
     super(client)
   }
 
@@ -218,13 +220,13 @@ export class PrismaPg extends PgQueryable<StdClient> implements DriverAdapter {
   constructor(
     client: pg.Pool,
     private options?: PrismaPgOptions,
-    { logQueries }: { logQueries?: boolean } = {}
+    {logQueries}: { logQueries?: boolean } = {}
   ) {
-  // PATCH: end
+    // PATCH: end
 
     // PATCH: Ignore type checking
     if (false) {
-    // PATCH: end
+      // PATCH: end
       throw new TypeError(`PrismaPg must be initialized with an instance of Pool:
 import { Pool } from 'pg'
 const pool = new Pool({ connectionString: url })

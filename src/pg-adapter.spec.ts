@@ -1,10 +1,10 @@
-import { PrismaPg } from './pg-adapter'
-import { contextToSqlComment } from './pg-utils'
+import {PrismaPg} from './pg-adapter'
+import {contextToSqlComment} from './pg-utils'
 
 const CONTEXT = {
   endpoint: '/todo/complete',
   userID: 1,
-  queryParams: { id: 37 },
+  queryParams: {id: 37},
 }
 
 const QUERIES = {
@@ -18,18 +18,18 @@ const QUERIES = {
 
 const callMockedPgAdapater = async (queries: string[]) => {
   const query = jest.fn(() => Promise.resolve({}))
-  const client = { query, previousQueries: [] }
+  const client = {query, previousQueries: []}
   const pgAdapter = new PrismaPg(client as any)
 
-  for(const sql of queries) {
-    await pgAdapter['performIO']({ sql, args: [] })
+  for (const sql of queries) {
+    await pgAdapter['performIO']({sql, args: []})
   }
 
   return query
 }
 
 const queryWithContext = (query: string) => {
-  return `${query} ${contextToSqlComment({ SQL: query, ...CONTEXT })}`
+  return `${query} ${contextToSqlComment({SQL: query, ...CONTEXT})}`
 }
 
 describe('PrismaPg', () => {

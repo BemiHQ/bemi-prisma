@@ -1,4 +1,4 @@
-import { blue } from 'kleur/colors'
+import {blue} from 'kleur/colors'
 
 export const logger = {
   tags: {

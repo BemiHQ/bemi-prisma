@@ -1,12 +1,12 @@
 // Last SHA: 4048b4add3aa2695a00db6e83f577b8abaaafab1
 
-import { type ColumnType, ColumnTypeEnum, JsonNullMarker } from '@prisma/driver-adapter-utils'
+import {type ColumnType, ColumnTypeEnum, JsonNullMarker} from '@prisma/driver-adapter-utils'
 // @ts-ignore: this is used to avoid the `Module '"<path>/node_modules/@types/pg/index"' has no default export.` error.
 import pg from 'pg'
-import { parse as parseArray } from 'postgres-array'
+import {parse as parseArray} from 'postgres-array'
 
-const { types } = pg
-const { builtins: ScalarColumnType, getTypeParser, setTypeParser } = types
+const {types} = pg
+const {builtins: ScalarColumnType, getTypeParser, setTypeParser} = types
 
 /**
  * PostgreSQL array column types (not defined in ScalarColumnType).
@@ -274,6 +274,7 @@ function normalize_array(element_normalizer: (arg: string) => string): (arg: str
 
 /****************************/
 /* Time-related data-types  */
+
 /****************************/
 
 function normalize_numeric(numeric: string): string {
@@ -285,6 +286,7 @@ setTypeParser(ArrayColumnType.NUMERIC_ARRAY, normalize_array(normalize_numeric))
 
 /****************************/
 /* Time-related data-types  */
+
 /****************************/
 
 function normalize_date(date: string): string {
@@ -334,6 +336,7 @@ setTypeParser(ScalarColumnType.TIMESTAMPTZ, normalize_timestampz)
 
 /******************/
 /* Money handling */
+
 /******************/
 
 function normalize_money(money: string): string {
@@ -345,6 +348,7 @@ setTypeParser(ArrayColumnType.MONEY_ARRAY, normalize_array(normalize_money))
 
 /*****************/
 /* JSON handling */
+
 /*****************/
 
 /**
@@ -366,6 +370,7 @@ setTypeParser(ScalarColumnType.JSON, toJson)
 
 /************************/
 /* Binary data handling */
+
 /************************/
 
 /**
@@ -384,6 +389,7 @@ function encodeBuffer(buffer: Buffer) {
  */
 
 const parsePgBytes = getTypeParser(ScalarColumnType.BYTEA) as (_: string) => Buffer
+
 /**
  * Convert bytes to a JSON-encodable representation since we can't
  * currently send a parsed Buffer or ArrayBuffer across JS to Rust

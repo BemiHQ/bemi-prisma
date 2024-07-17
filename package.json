@@ -1,6 +1,6 @@
 {
-  "name": "@bemi-db/prisma",
-  "version": "0.4.0",
+  "name": "@mediavine/prisma-audit-log-extension",
+  "version": "1.0.0",
   "description": "Automatic data change tracking for Prisma",
   "main": "dist/index.js",
   "module": "./dist/index.mjs",
@@ -8,19 +8,12 @@
   "files": [
     "dist"
   ],
-  "bin": {
-    "bemi": "dist/cli.js"
-  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/BemiHQ/bemi-prisma.git"
+    "url": "git://github.com/mediavine/prisma-audit-log-extension.git"
   },
   "author": "",
-  "license": "LGPL-3.0",
-  "bugs": {
-    "url": "https://github.com/BemiHQ/bemi-prisma/issues"
-  },
-  "homepage": "https://github.com/BemiHQ/bemi-prisma#readme",
+  "homepage": "https://github.com/mediavine/prisma-audit-log-extension/#README.md",
   "dependencies": {
     "@prisma/driver-adapter-utils": "~5.9.1",
     "commander": "^11.1.0",
@@ -38,7 +31,8 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "prettier": "^3.3.3"
   },
   "scripts": {
     "build": "tsup",

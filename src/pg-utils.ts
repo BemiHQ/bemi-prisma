@@ -1,4 +1,4 @@
-import type { Query } from '@prisma/driver-adapter-utils'
+import type {Query} from '@prisma/driver-adapter-utils'
 import pg from 'pg'
 
 export interface StdClient extends pg.Pool {
@@ -11,18 +11,18 @@ export interface TransactionClient extends pg.PoolClient {
   readyToExecuteTransaction?: boolean
 }
 
-export const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
+export const EMPTY_RESULT = {rowCount: null, fields: [], command: '', oid: 0, rows: []} as pg.QueryResult
 
 export const contextToSqlComment = (context: any): string => {
-  return `/*Bemi ${JSON.stringify(context)} Bemi*/`
+  return `/*_MV_DB_AUDIT ${JSON.stringify(context)} _MV_DB_AUDIT*/`
 }
 
 export const sqlCommentToContext = (sql: string): any => {
-  return JSON.parse(sql.replace('/*Bemi ', '').replace(' Bemi*/', ''))
+  return JSON.parse(sql.replace('/*_MV_DB_AUDIT ', '').replace(' _MV_DB_AUDIT*/', ''))
 }
 
 export const isContextComment = (sql: string): boolean => {
-  return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
+  return sql.startsWith('/*_MV_DB_AUDIT') && sql.endsWith('_MV_DB_AUDIT*/')
 }
 
 export const isWriteQuery = (sql: string): boolean => {

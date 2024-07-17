@@ -1,23 +1,23 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-import { bindAdapter } from '@prisma/driver-adapter-utils'
-import { Pool } from "pg";
-import { Request, Response, NextFunction } from "express";
+import {AsyncLocalStorage} from "node:async_hooks";
+import {bindAdapter} from '@prisma/driver-adapter-utils'
+import {Pool} from "pg";
+import {NextFunction, Request, Response} from "express";
 
-import { PrismaPg } from './pg-adapter';
-import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
-import { logger } from './logger'
+import {PrismaPg} from './pg-adapter';
+import {contextToSqlComment, isContextComment, isWriteQuery} from './pg-utils'
+import {logger} from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
 const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 const MAX_CONTEXT_SIZE = 1000000 // ~ 1MB
 
-export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType): PrismaClientType => {
-  const { logQueries } = (originalPrisma as any)._engineConfig
+export const withAuditLogAdapter = <PrismaClientType>(originalPrisma: PrismaClientType, models: string[]): PrismaClientType => {
+  const {logQueries} = (originalPrisma as any)._engineConfig
 
   const prisma = (originalPrisma as any).$extends({
     query: {
-      async $allOperations({ args, query, operation }: any) {
+      async $allOperations({args, query, operation, model}: any) {
         // Not contextualizable query
         if (
           !WRITE_OPERATIONS.includes(operation) &&
@@ -32,6 +32,9 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
         // Injected context query
         if (operation === '$executeRawUnsafe' && args[0] && isContextComment(args[0])) {
           return query(args)
+        } else if (!model || !models?.length || !models.includes(model)) {
+          // Model is not part of the audit log extension models
+          return query(args);
         }
 
         // There is no context or it's not an object
@@ -54,9 +57,9 @@ export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType
     },
   })
 
-  const { url } = prisma._engineConfig.inlineDatasources.db
-  const pool = new Pool({ connectionString: url.value || process.env[url.fromEnvVar] });
-  const pgAdapter = new PrismaPg(pool, undefined, { logQueries });
+  const {url} = prisma._engineConfig.inlineDatasources.db
+  const pool = new Pool({connectionString: url.value || process.env[url.fromEnvVar]});
+  const pgAdapter = new PrismaPg(pool, undefined, {logQueries});
   prisma._engineConfig.logQueries = false
   prisma._engineConfig.adapter = bindAdapter(pgAdapter);
 

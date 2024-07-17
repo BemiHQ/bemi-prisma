@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
+import {Command} from "commander";
 import fs from "fs";
 import path from "path";
 
@@ -80,9 +80,8 @@ const program = new Command();
 
 program.name("bemi").description("CLI to Bemi utilities").version("0.2.8");
 
-program.
-  command("migration:create").
-  description("Create a new Prisma migration file with Bemi PostgreSQL triggers").
-  action(() => { generateMigrationFile() });
+program.command("migration:create").description("Create a new Prisma migration file with Bemi PostgreSQL triggers").action(() => {
+  generateMigrationFile()
+});
 
 program.parseAsync(process.argv);

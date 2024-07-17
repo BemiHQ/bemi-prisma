@@ -1,30 +1,6 @@
-<div align="center">
-  <a href="https://bemi.io">
-    <img width="1201" alt="bemi-banner" src="https://docs.bemi.io/img/bemi-banner.png">
-  </a>
+# Audit Log Prisma Extension
 
-  <p align="center">
-    <a href="https://bemi.io">Website</a>
-    ·
-    <a href="https://docs.bemi.io">Docs</a>
-    ·
-    <a href="https://github.com/BemiHQ/bemi-prisma-example">Example</a>
-    ·
-    <a href="https://github.com/BemiHQ/bemi-prisma/issues/new">Report Bug</a>
-    ·
-    <a href="https://github.com/BemiHQ/bemi-prisma/issues/new">Request Feature</a>
-    ·
-    <a href="https://join.slack.com/t/bemi-community/shared_invite/zt-2lv5jlg84-a4d6t7~5Zef~N9FRWgXhbw">Slack</a>
-    ·
-    <a href="https://twitter.com/BemiHQ">Twitter</a>
-    ·
-    <a href="https://www.linkedin.com/company/bemihq/about">LinkedIn</a>
-  </p>
-</div>
-
-# Bemi Prisma
-
-[Bemi](https://bemi.io) plugs into [Prisma](https://github.com/prisma/prisma) and your existing PostgreSQL database to track data changes automatically. It unlocks robust context-aware audit trails and time travel querying inside your application.
+Plugs into [Prisma](https://github.com/prisma/prisma) and your existing PostgreSQL database to track data changes automatically. It unlocks robust context-aware audit trails and time travel querying inside your application.
 
 Designed with simplicity and non-invasiveness in mind, Bemi doesn't require any alterations to your existing database structure. It operates in the background, empowering you with data change tracking features.
 
