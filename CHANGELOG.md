@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.4.1](https://github.com/BemiHQ/bemi-prisma/compare/v0.4.0...v0.4.1) - 2024-08-02
+
+- Fix compatibility with Prisma v5.15+
+
 #### [v0.4.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.3.0...v0.4.0) - 2024-04-16
 
 - Fix Next.js actions by removing `@prisma/internals` as a dependency
