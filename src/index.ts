@@ -12,12 +12,20 @@ const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 const MAX_CONTEXT_SIZE = 1000000 // ~ 1MB
 
-export const withPgAdapter = <PrismaClientType>(originalPrisma: PrismaClientType): PrismaClientType => {
+export const withPgAdapter = <PrismaClientType>(
+  originalPrisma: PrismaClientType,
+  { includeModels }: { includeModels?: string[] } = {},
+): PrismaClientType => {
   const { logQueries } = (originalPrisma as any)._engineConfig
 
   const prisma = (originalPrisma as any).$extends({
     query: {
-      async $allOperations({ args, query, operation }: any) {
+      async $allOperations({ args, query, operation, model }: any) {
+        // Not included model
+        if (model && includeModels && !includeModels.includes(model)) {
+          return query(args)
+        }
+
         // Not contextualizable query
         if (
           !WRITE_OPERATIONS.includes(operation) &&

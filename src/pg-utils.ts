@@ -1,6 +1,8 @@
 import type { Query } from '@prisma/driver-adapter-utils'
 import pg from 'pg'
 
+const SQL_COMMENT_AFFIX = process.env.BEMI_SQL_COMMENT_AFFIX || 'Bemi'
+
 export interface StdClient extends pg.Pool {
   logQueries: boolean
 }
@@ -14,15 +16,15 @@ export interface TransactionClient extends pg.PoolClient {
 export const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
 
 export const contextToSqlComment = (context: any): string => {
-  return `/*Bemi ${JSON.stringify(context)} Bemi*/`
+  return `/*${SQL_COMMENT_AFFIX} ${JSON.stringify(context)} ${SQL_COMMENT_AFFIX}*/`
 }
 
 export const sqlCommentToContext = (sql: string): any => {
-  return JSON.parse(sql.replace('/*Bemi ', '').replace(' Bemi*/', ''))
+  return JSON.parse(sql.replace(`/*${SQL_COMMENT_AFFIX} `, '').replace(` ${SQL_COMMENT_AFFIX}*/`, ''))
 }
 
 export const isContextComment = (sql: string): boolean => {
-  return sql.startsWith('/*Bemi') && sql.endsWith('Bemi*/')
+  return sql.startsWith(`/*${SQL_COMMENT_AFFIX}`) && sql.endsWith(`${SQL_COMMENT_AFFIX}*/`)
 }
 
 export const isWriteQuery = (sql: string): boolean => {

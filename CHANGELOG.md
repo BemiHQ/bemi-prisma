@@ -1,5 +1,10 @@
 # Changelog
 
+#### [v0.5.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.4.1...v0.5.0) - 2024-08-08
+
+- Allow context passing only for specific models with `includeModels`
+- Enable SQL comment affix customization
+
 #### [v0.4.1](https://github.com/BemiHQ/bemi-prisma/compare/v0.4.0...v0.4.1) - 2024-08-02
 
 - Fix compatibility with Prisma v5.15+
