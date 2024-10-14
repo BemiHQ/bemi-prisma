@@ -22,7 +22,7 @@ const callMockedPgAdapater = async (queries: string[]) => {
   const pgAdapter = new PrismaPg(client as any)
 
   for(const sql of queries) {
-    await pgAdapter['performIO']({ sql, args: [] })
+    await pgAdapter['performIO']({ sql, args: [], argTypes: [] })
   }
 
   return query

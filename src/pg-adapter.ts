@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
+
 import type {
   ColumnType,
   ConnectionInfo,
@@ -8,6 +9,7 @@ import type {
   Result,
   ResultSet,
   Transaction,
+  TransactionContext,
   TransactionOptions,
 } from '@prisma/driver-adapter-utils'
 import { Debug, err, ok } from '@prisma/driver-adapter-utils'
@@ -237,6 +239,23 @@ class PgTransaction extends PgQueryable<TransactionClient> implements Transactio
   }
 }
 
+class PgTransactionContext extends PgQueryable<TransactionClient> implements TransactionContext {
+  constructor(readonly conn: TransactionClient) {
+    super(conn)
+  }
+
+  async startTransaction(): Promise<Result<Transaction>> {
+    const options: TransactionOptions = {
+      usePhantomQuery: false,
+    }
+
+    const tag = '[js::startTransaction]'
+    debug('%s options: %O', tag, options)
+
+    return ok(new PgTransaction(this.conn, options))
+  }
+}
+
 export type PrismaPgOptions = {
   schema?: string
 }
@@ -276,21 +295,14 @@ const adapter = new PrismaPg(pool)
     })
   }
 
-  async startTransaction(): Promise<Result<Transaction>> {
-    const options: TransactionOptions = {
-      usePhantomQuery: false,
-    }
-
-    const tag = '[js::startTransaction]'
-    debug(`${tag} options: %O`, options)
-
+  async transactionContext(): Promise<Result<TransactionContext>> {
     // PATCH: Customize connection
-    const connection = await this.client.connect() as TransactionClient
-    connection.previousQueries = []
-    connection.logQueries = this.logQueries
-    connection.readyToExecuteTransaction = false
+    const conn = await this.client.connect() as TransactionClient
+    conn.previousQueries = []
+    conn.logQueries = this.logQueries
+    conn.readyToExecuteTransaction = false
     // PATCH: end
 
-    return ok(new PgTransaction(connection, options))
+    return ok(new PgTransactionContext(conn))
   }
 }

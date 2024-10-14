@@ -6,3 +6,6 @@ build:
 
 publish:
 	npm publish --access public
+
+test:
+	pnpm run test

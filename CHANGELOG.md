@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.6.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.5.0...v0.6.0) - 2024-10-14
+
+- Fix compatibility with Prisma v5.20+
+
 #### [v0.5.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.4.1...v0.5.0) - 2024-08-08
 
 - Allow context passing only for specific models with `includeModels`
