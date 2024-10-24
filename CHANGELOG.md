@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.7.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.6.0...v0.7.0) - 2024-10-24
+
+- Enable passing application context in non-public schemas.
+
 #### [v0.6.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.5.0...v0.6.0) - 2024-10-14
 
 - Fix compatibility with Prisma v5.20+

@@ -8,7 +8,8 @@ import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
 import { logger } from './logger'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
-const EXECUTE_OPERATIONS = ["$executeRaw", "$executeRawUnsafe"]
+const EXECUTE_RAW_UNSAFE_OPERATION = ["$executeRawUnsafe"]
+const EXECUTE_OPERATIONS = ["$executeRaw", EXECUTE_RAW_UNSAFE_OPERATION]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 const MAX_CONTEXT_SIZE = 1000000 // ~ 1MB
 
@@ -21,6 +22,7 @@ export const withPgAdapter = <PrismaClientType>(
   const prisma = (originalPrisma as any).$extends({
     query: {
       async $allOperations({ args, query, operation, model }: any) {
+
         // Not included model
         if (model && includeModels && !includeModels.includes(model)) {
           return query(args)
@@ -38,7 +40,7 @@ export const withPgAdapter = <PrismaClientType>(
         }
 
         // Injected context query
-        if (operation === '$executeRawUnsafe' && args[0] && isContextComment(args[0])) {
+        if (operation === EXECUTE_RAW_UNSAFE_OPERATION && args[0] && isContextComment(args[0])) {
           return query(args)
         }
 

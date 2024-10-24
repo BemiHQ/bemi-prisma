@@ -26,19 +26,20 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE _bemi_create_triggers()
 AS $$
 DECLARE
+  current_schemaname TEXT;
   current_tablename TEXT;
 BEGIN
-  FOR current_tablename IN
-    SELECT tablename FROM pg_tables
+  FOR current_schemaname, current_tablename IN
+    SELECT schemaname, tablename FROM pg_tables
     LEFT JOIN information_schema.triggers ON tablename = event_object_table AND schemaname = trigger_schema AND trigger_name LIKE '_bemi_row_trigger_%'
-    WHERE schemaname = 'public' AND trigger_name IS NULL
-    GROUP BY tablename
+    WHERE schemaname NOT IN ('information_schema', 'pg_catalog') AND trigger_name IS NULL
+    GROUP BY schemaname, tablename
   LOOP
     EXECUTE format(
-      'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s
-      BEFORE INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW
+      'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s_%s
+      BEFORE INSERT OR UPDATE OR DELETE ON %I.%I FOR EACH ROW
       EXECUTE FUNCTION _bemi_row_trigger_func()',
-      current_tablename, current_tablename
+      current_schemaname, current_tablename, current_schemaname, current_tablename
     );
   END LOOP;
 END;
