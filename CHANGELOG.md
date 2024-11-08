@@ -1,5 +1,13 @@
 # Changelog
 
+#### [v0.8.1](https://github.com/BemiHQ/bemi-prisma/compare/v0.8.0...v0.8.1) - 2024-11-13
+
+- Fix using Prisma client database URL specified in `datasources.db` [#5](https://github.com/BemiHQ/bemi-prisma/pull/5)
+
+#### [v0.8.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.7.0...v0.8.0) - 2024-11-08
+
+- Allow using Prisma client database URL specified in `datasources.db` [#4](https://github.com/BemiHQ/bemi-prisma/pull/5)
+
 #### [v0.7.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.6.0...v0.7.0) - 2024-10-24
 
 - Enable passing application context in non-public schemas.
