@@ -64,9 +64,16 @@ export const withPgAdapter = <PrismaClientType>(
     },
   })
 
-  const { url } = prisma._engineConfig.overrideDatasources?.db ?? prisma._engineConfig.inlineDatasources.db
-  const pool = new Pool({ connectionString: url.value || process.env[url.fromEnvVar] });
-  const pgAdapter = new PrismaPg(pool, undefined, { logQueries });
+  let connectionString;
+  if (prisma._engineConfig.overrideDatasources.db?.url) {
+    connectionString = prisma._engineConfig.overrideDatasources.db.url;
+  } else {
+    const {url} = prisma._engineConfig.inlineDatasources.db;
+    connectionString = url.value || process.env[url.fromEnvVar];
+  }
+
+  const pool = new Pool({connectionString});
+  const pgAdapter = new PrismaPg(pool, undefined, {logQueries});
   prisma._engineConfig.logQueries = false
   prisma._engineConfig.adapter = bindAdapter(pgAdapter);
 
