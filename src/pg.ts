@@ -3,20 +3,22 @@
 import type {
   ColumnType,
   ConnectionInfo,
-  DriverAdapter,
-  Query,
-  Queryable,
-  Result,
-  ResultSet,
+  IsolationLevel,
+  SqlDriverAdapter,
+  SqlMigrationAwareDriverAdapterFactory,
+  SqlQuery,
+  SqlQueryable,
+  SqlResultSet,
   Transaction,
-  TransactionContext,
   TransactionOptions,
 } from '@prisma/driver-adapter-utils'
-import { Debug, err, ok } from '@prisma/driver-adapter-utils'
+import { Debug, DriverAdapterError } from '@prisma/driver-adapter-utils'
 // @ts-ignore: this is used to avoid the `Module '"<path>/node_modules/@types/pg/index"' has no default export.` error.
 import pg from 'pg'
 
+const packageName = '@prisma/adapter-pg' // PATCH: ignore import { name as packageName } from '../package.json'
 import { customParsers, fieldToColumnType, fixArrayBufferValues, UnsupportedNativeDataType } from './conversion'
+import { convertDriverError } from './errors'
 
 const types = pg.types
 
@@ -37,26 +39,21 @@ import {
 } from './pg-utils'
 // PATCH: end
 
-class PgQueryable<ClientT extends StdClient | TransactionClient> implements Queryable {
+class PgQueryable<ClientT extends StdClient | TransactionClient> implements SqlQueryable {
   readonly provider = 'postgres'
-  readonly adapterName = '@prisma/adapter-pg'
+  readonly adapterName = packageName
 
   constructor(protected readonly client: ClientT) {}
 
   /**
    * Execute a query given as SQL, interpolating the given parameters.
    */
-  async queryRaw(query: Query): Promise<Result<ResultSet>> {
+  async queryRaw(query: SqlQuery): Promise<SqlResultSet> {
     const tag = '[js::query_raw]'
     debug(`${tag} %O`, query)
 
-    const res = await this.performIO(query)
+    const { fields, rows } = await this.performIO(query)
 
-    if (!res.ok) {
-      return err(res.error)
-    }
-
-    const { fields, rows } = res.value
     const columnNames = fields.map((field) => field.name)
     let columnTypes: ColumnType[] = []
 
@@ -64,7 +61,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       columnTypes = fields.map((field) => fieldToColumnType(field.dataTypeID))
     } catch (e) {
       if (e instanceof UnsupportedNativeDataType) {
-        return err({
+        throw new DriverAdapterError({
           kind: 'UnsupportedNativeDataType',
           type: e.type,
         })
@@ -72,11 +69,11 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
       throw e
     }
 
-    return ok({
+    return {
       columnNames,
       columnTypes,
       rows,
-    })
+    }
   }
 
   /**
@@ -84,12 +81,12 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
    * returning the number of affected rows.
    * Note: Queryable expects a u64, but napi.rs only supports u32.
    */
-  async executeRaw(query: Query): Promise<Result<number>> {
+  async executeRaw(query: SqlQuery): Promise<number> {
     const tag = '[js::execute_raw]'
     debug(`${tag} %O`, query)
 
     // Note: `rowsAffected` can sometimes be null (e.g., when executing `"BEGIN"`)
-    return (await this.performIO(query)).map(({ rowCount: rowsAffected }) => rowsAffected ?? 0)
+    return (await this.performIO(query)).rowCount ?? 0
   }
 
   /**
@@ -97,37 +94,23 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
    * Should the query fail due to a connection error, the connection is
    * marked as unhealthy.
    */
-  // PATCH: pass extra argument
-  private async performIO(query: Query, catchingUp = false): Promise<Result<pg.QueryArrayResult<any>>> {
-  // PATCH: end
+  private async performIO(query: SqlQuery, catchingUp = false): Promise<pg.QueryArrayResult<any>> { // PATCH: pass an extra argument
 
     try {
-      // PATCH: Call compactPerformIOResult
-      const result = await this.compactPerformIOResult(query, catchingUp)
-      // PATCH: end
-      return ok(result)
-    // PATCH: Fix TypeScript errors
-    } catch (e: any) {
-    // PATCH: end
-      const error = e as Error
-      debug('Error in performIO: %O', error)
-      if (e && typeof e.code === 'string' && typeof e.severity === 'string' && typeof e.message === 'string') {
-        return err({
-          kind: 'Postgres',
-          code: e.code,
-          severity: e.severity,
-          message: e.message,
-          detail: e.detail,
-          column: e.column,
-          hint: e.hint,
-        })
-      }
-      throw error
+      const result = await this.compactPerformIOResult(query, catchingUp) // PATCH: Call compactPerformIOResult
+      return result
+    } catch (e: any) { // PATCH: Fix TypeScript errors
+      this.onError(e)
     }
   }
 
+  protected onError(error: any): never {
+    debug('Error in performIO: %O', error)
+    throw new DriverAdapterError(convertDriverError(error))
+  }
+
   // PATCH: Remove unnnecessary transactions
-  private async compactPerformIOResult(query: Query, catchingUp: boolean): Promise<pg.QueryResult> {
+  private async compactPerformIOResult(query: SqlQuery, catchingUp: boolean): Promise<pg.QueryResult> {
     const { sql, args: values } = query
     const transactionClient = this.client as TransactionClient
     const { previousQueries, readyToExecuteTransaction } = transactionClient
@@ -168,7 +151,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
         ) {
           transactionClient.readyToExecuteTransaction = true
           for(const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
-            await this.performIO(prevQuery as Query, true)
+            await this.performIO(prevQuery as SqlQuery, true)
           }
         }
       }
@@ -218,41 +201,20 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements Quer
 }
 
 class PgTransaction extends PgQueryable<TransactionClient> implements Transaction {
-  // PATCH: Fix TypeScript errors
-  constructor(client: TransactionClient, readonly options: TransactionOptions) {
-  // PATCH: end
+  constructor(client: TransactionClient, readonly options: TransactionOptions) { // PATCH: Fix TypeScript errors
     super(client)
   }
 
-  async commit(): Promise<Result<void>> {
+  async commit(): Promise<void> {
     debug(`[js::commit]`)
 
     this.client.release()
-    return ok(undefined)
   }
 
-  async rollback(): Promise<Result<void>> {
+  async rollback(): Promise<void> {
     debug(`[js::rollback]`)
 
     this.client.release()
-    return ok(undefined)
-  }
-}
-
-class PgTransactionContext extends PgQueryable<TransactionClient> implements TransactionContext {
-  constructor(readonly conn: TransactionClient) {
-    super(conn)
-  }
-
-  async startTransaction(): Promise<Result<Transaction>> {
-    const options: TransactionOptions = {
-      usePhantomQuery: false,
-    }
-
-    const tag = '[js::startTransaction]'
-    debug('%s options: %O', tag, options)
-
-    return ok(new PgTransaction(this.conn, options))
   }
 }
 
@@ -260,49 +222,99 @@ export type PrismaPgOptions = {
   schema?: string
 }
 
-export class PrismaPg extends PgQueryable<StdClient> implements DriverAdapter {
+export class PrismaPgAdapter extends PgQueryable<StdClient> implements SqlDriverAdapter {
   // PATCH: Add logQueries
   logQueries: boolean
-
-  constructor(
-    client: pg.Pool,
-    private options?: PrismaPgOptions,
-    { logQueries }: { logQueries?: boolean } = {}
-  ) {
+  constructor(client: StdClient, private options?: PrismaPgOptions, private readonly release?: () => Promise<void>, { logQueries }: { logQueries?: boolean } = {}) {
+    client.logQueries = logQueries || false
+    super(client)
+    this.logQueries = client.logQueries
+  }
   // PATCH: end
 
-    // PATCH: Ignore type checking
-    if (false) {
-    // PATCH: end
-      throw new TypeError(`PrismaPg must be initialized with an instance of Pool:
-import { Pool } from 'pg'
-const pool = new Pool({ connectionString: url })
-const adapter = new PrismaPg(pool)
-`)
+  async startTransaction(isolationLevel?: IsolationLevel): Promise<Transaction> {
+    const options: TransactionOptions = {
+      usePhantomQuery: false,
     }
 
-    // PATCH: Add logQueries
-    const standardClient = client as StdClient
-    standardClient.logQueries = logQueries || false
-    super(standardClient)
-    this.logQueries = standardClient.logQueries
-    // PATCH: end
-  }
+    const tag = '[js::startTransaction]'
+    debug('%s options: %O', tag, options)
 
-  getConnectionInfo(): Result<ConnectionInfo> {
-    return ok({
-      schemaName: this.options?.schema,
-    })
-  }
-
-  async transactionContext(): Promise<Result<TransactionContext>> {
     // PATCH: Customize connection
-    const conn = await this.client.connect() as TransactionClient
+    const conn = await this.client.connect().catch((error) => this.onError(error)) as TransactionClient
     conn.previousQueries = []
     conn.logQueries = this.logQueries
     conn.readyToExecuteTransaction = false
     // PATCH: end
 
-    return ok(new PgTransactionContext(conn))
+    try {
+      const tx = new PgTransaction(conn, options)
+      await tx.executeRaw({ sql: 'BEGIN', args: [], argTypes: [] })
+      if (isolationLevel) {
+        await tx.executeRaw({
+          sql: `SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`,
+          args: [],
+          argTypes: [],
+        })
+      }
+      return tx
+    } catch (error: any) { // PATCH: Fix TypeScript errors
+      conn.release(error)
+      this.onError(error)
+    }
+  }
+
+  async executeScript(script: string): Promise<void> {
+    // TODO: crude implementation for now, might need to refine it
+    for (const stmt of script.split(';')) {
+      try {
+        await this.client.query(stmt)
+      } catch (error) {
+        this.onError(error)
+      }
+    }
+  }
+
+  getConnectionInfo(): ConnectionInfo {
+    return {
+      schemaName: this.options?.schema,
+    }
+  }
+
+  async dispose(): Promise<void> {
+    await this.release?.()
+    return await this.client.end()
+  }
+}
+
+export class PrismaPgAdapterFactory implements SqlMigrationAwareDriverAdapterFactory {
+  logQueries: boolean // PATCH: Add logQueries
+
+  readonly provider = 'postgres'
+  readonly adapterName = packageName
+
+  // PATCH: add logQueries
+  constructor(private readonly config: pg.PoolConfig, private readonly options?: PrismaPgOptions, { logQueries }: { logQueries?: boolean } = {}) {
+    this.logQueries = logQueries || false
+  }
+  // PATCH: end
+
+  async connect(): Promise<SqlDriverAdapter> {
+    // PATCH: client type and logQueries
+    return new PrismaPgAdapter(new pg.Pool(this.config) as StdClient, this.options, async () => {}, {logQueries: this.logQueries})
+    // PATCH: end
+  }
+
+  async connectToShadowDb(): Promise<SqlDriverAdapter> {
+    const conn = await this.connect()
+    const database = `prisma_migrate_shadow_db_${globalThis.crypto.randomUUID()}`
+    await conn.executeScript(`CREATE DATABASE "${database}"`)
+
+    // PATCH: client type and logQueries
+    return new PrismaPgAdapter(new pg.Pool({ ...this.config, database }) as StdClient, undefined, async () => {
+      await conn.executeScript(`DROP DATABASE "${database}"`)
+      // Note: no need to call dispose here. This callback is run as part of dispose.
+    }, {logQueries: this.logQueries})
+    // PATCH: end
   }
 }

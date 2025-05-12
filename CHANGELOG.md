@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v0.9.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.8.1...v0.9.0) - 2025-05-12
+
+- Make the package compatible with Prisma v6.7+
+
 #### [v0.8.1](https://github.com/BemiHQ/bemi-prisma/compare/v0.8.0...v0.8.1) - 2024-11-13
 
 - Fix using Prisma client database URL specified in `datasources.db` [#5](https://github.com/BemiHQ/bemi-prisma/pull/5)

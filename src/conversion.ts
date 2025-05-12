@@ -1,5 +1,6 @@
-// Last commit: https://github.com/prisma/prisma/commit/47e8f1307ba73df65b80da32c4dd0d5e2816cc95
-// https://github.com/prisma/prisma/compare/b36b73c2c349f80dc456dfd321f3c4cdc2aacfed..47e8f1307ba73df65b80da32c4dd0d5e2816cc95
+// Last commit: https://github.com/prisma/prisma/commit/e4208dc0b983120feb89d38fd98bd10d33a32b70
+// https://github.com/prisma/prisma/compare/47e8f1307ba73df65b80da32c4dd0d5e2816cc95..e4208dc0b983120feb89d38fd98bd10d33a32b70
+// In packages/adapter-pg/*
 
 // @ts-ignore: this is used to avoid the `Module '"<path>/node_modules/@types/pg/index"' has no default export.` error.
 import { type ColumnType, ColumnTypeEnum } from '@prisma/driver-adapter-utils'
