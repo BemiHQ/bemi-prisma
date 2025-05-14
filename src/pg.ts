@@ -24,11 +24,12 @@ const types = pg.types
 
 const debug = Debug('prisma:driver-adapter:pg')
 
+type StdClient = pg.Pool
+type TransactionClient = pg.PoolClient
+
 // PATCH: Import additional things
 import { logger } from './logger'
 import {
-  StdClient,
-  TransactionClient,
   EMPTY_RESULT,
   contextToSqlComment,
   sqlCommentToContext,
@@ -40,6 +41,13 @@ import {
 // PATCH: end
 
 class PgQueryable<ClientT extends StdClient | TransactionClient> implements SqlQueryable {
+  // PATCH: add Bemi options
+  logQueries = false
+  injectSqlInContext = false
+  transactionPreviousQueries: undefined | SqlQuery[] = undefined
+  transactionReadyToExecute = false
+  // PATCH: end
+
   readonly provider = 'postgres'
   readonly adapterName = packageName
 
@@ -112,45 +120,47 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements SqlQ
   // PATCH: Remove unnnecessary transactions
   private async compactPerformIOResult(query: SqlQuery, catchingUp: boolean): Promise<pg.QueryResult> {
     const { sql, args: values } = query
-    const transactionClient = this.client as TransactionClient
-    const { previousQueries, readyToExecuteTransaction } = transactionClient
 
     let text = sql
 
     // Modify the execution
-    if (this.client.logQueries && !catchingUp) {
-      logger.debug('QUERY:', sql, previousQueries ? previousQueries.length : '')
+    if (this.logQueries && !catchingUp) {
+      logger.debug('QUERY:', sql, this.transactionPreviousQueries ? this.transactionPreviousQueries.length : '')
     }
 
     // Transaction queries
-    if (previousQueries) {
+    if (this.transactionPreviousQueries) {
       const isContext = isContextComment(sql)
       const isWrite = isWriteQuery(sql)
-      const previousContextComment = previousQueries.find((q) => isContextComment(q.sql))?.sql
+      const previousContextComment = this.transactionPreviousQueries.find((q) => isContextComment(q.sql))?.sql
 
       if (previousContextComment && isWrite) {
-        text = `${sql} ${contextToSqlComment({ SQL: sql, ...sqlCommentToContext(previousContextComment) })}`
+        if (this.injectSqlInContext) {
+          text = `${sql} ${contextToSqlComment({ SQL: sql, ...sqlCommentToContext(previousContextComment) })}`
+        } else {
+          text = `${sql} ${previousContextComment}`
+        }
       }
 
       if (!catchingUp) {
-        previousQueries.push(query)
+        this.transactionPreviousQueries.push(query)
       }
 
       // Skip accumulated queries or catch up and mark the transaction as ready to execute
-      if (!readyToExecuteTransaction) {
+      if (!this.transactionReadyToExecute) {
         // Skip accumulated BEGIN
-        if (isBeginQuery(sql) && previousQueries.length === 1) return EMPTY_RESULT
+        if (isBeginQuery(sql) && this.transactionPreviousQueries.length === 1) return EMPTY_RESULT
 
         // Skip accumulated COMMIT
-        if (isCommitQuery(sql) && previousContextComment && previousQueries.length === 4) return EMPTY_RESULT
+        if (isCommitQuery(sql) && previousContextComment && this.transactionPreviousQueries.length === 4) return EMPTY_RESULT
 
         // Catch up and continue the entire transaction
         if (
-          (previousQueries.length === 2 && !isContext) ||
-          (previousQueries.length === 3 && !isWrite)
+          (this.transactionPreviousQueries.length === 2 && !isContext) ||
+          (this.transactionPreviousQueries.length === 3 && !isWrite)
         ) {
-          transactionClient.readyToExecuteTransaction = true
-          for(const prevQuery of previousQueries.slice(0, previousQueries.length - 1)) {
+          this.transactionReadyToExecute = true
+          for(const prevQuery of this.transactionPreviousQueries.slice(0, this.transactionPreviousQueries.length - 1)) {
             await this.performIO(prevQuery as SqlQuery, true)
           }
         }
@@ -161,7 +171,7 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements SqlQ
     }
 
     // Log modified queries
-    if (this.client.logQueries) {
+    if (this.logQueries) {
       logger.log(`${logger.tags['info'] ?? ''}`, text)
     }
 
@@ -200,9 +210,10 @@ class PgQueryable<ClientT extends StdClient | TransactionClient> implements SqlQ
   // PATCH: end
 }
 
-class PgTransaction extends PgQueryable<TransactionClient> implements Transaction {
-  constructor(client: TransactionClient, readonly options: TransactionOptions) { // PATCH: Fix TypeScript errors
+export class PgTransaction extends PgQueryable<TransactionClient> implements Transaction { // PATCH: export for testing
+  constructor(client: pg.PoolClient, readonly options: TransactionOptions) {
     super(client)
+    this.transactionPreviousQueries = [] // PATCH: set transactionPreviousQueries
   }
 
   async commit(): Promise<void> {
@@ -223,14 +234,9 @@ export type PrismaPgOptions = {
 }
 
 export class PrismaPgAdapter extends PgQueryable<StdClient> implements SqlDriverAdapter {
-  // PATCH: Add logQueries
-  logQueries: boolean
-  constructor(client: StdClient, private options?: PrismaPgOptions, private readonly release?: () => Promise<void>, { logQueries }: { logQueries?: boolean } = {}) {
-    client.logQueries = logQueries || false
+  constructor(client: StdClient, private options?: PrismaPgOptions, private readonly release?: () => Promise<void>) {
     super(client)
-    this.logQueries = client.logQueries
   }
-  // PATCH: end
 
   async startTransaction(isolationLevel?: IsolationLevel): Promise<Transaction> {
     const options: TransactionOptions = {
@@ -240,15 +246,16 @@ export class PrismaPgAdapter extends PgQueryable<StdClient> implements SqlDriver
     const tag = '[js::startTransaction]'
     debug('%s options: %O', tag, options)
 
-    // PATCH: Customize connection
-    const conn = await this.client.connect().catch((error) => this.onError(error)) as TransactionClient
-    conn.previousQueries = []
-    conn.logQueries = this.logQueries
-    conn.readyToExecuteTransaction = false
-    // PATCH: end
+    const conn = await this.client.connect().catch((error) => this.onError(error))
 
     try {
       const tx = new PgTransaction(conn, options)
+
+      // PATCH: Bemi options
+      tx.logQueries = this.logQueries
+      tx.injectSqlInContext = this.injectSqlInContext
+      // PATCH: end
+
       await tx.executeRaw({ sql: 'BEGIN', args: [], argTypes: [] })
       if (isolationLevel) {
         await tx.executeRaw({
@@ -288,20 +295,22 @@ export class PrismaPgAdapter extends PgQueryable<StdClient> implements SqlDriver
 }
 
 export class PrismaPgAdapterFactory implements SqlMigrationAwareDriverAdapterFactory {
-  logQueries: boolean // PATCH: Add logQueries
+  // PATCH: add Bemi options
+  logQueries = false
+  injectSqlInContext = false
+  // PATCH: end
 
   readonly provider = 'postgres'
   readonly adapterName = packageName
 
-  // PATCH: add logQueries
-  constructor(private readonly config: pg.PoolConfig, private readonly options?: PrismaPgOptions, { logQueries }: { logQueries?: boolean } = {}) {
-    this.logQueries = logQueries || false
-  }
-  // PATCH: end
+  constructor(private readonly config: pg.PoolConfig, private readonly options?: PrismaPgOptions) {}
 
   async connect(): Promise<SqlDriverAdapter> {
-    // PATCH: client type and logQueries
-    return new PrismaPgAdapter(new pg.Pool(this.config) as StdClient, this.options, async () => {}, {logQueries: this.logQueries})
+    // PATCH: Bemi options
+    const adapter = new PrismaPgAdapter(new pg.Pool(this.config), this.options, async () => {})
+    adapter.logQueries = this.logQueries
+    adapter.injectSqlInContext = this.injectSqlInContext
+    return adapter
     // PATCH: end
   }
 
@@ -310,11 +319,14 @@ export class PrismaPgAdapterFactory implements SqlMigrationAwareDriverAdapterFac
     const database = `prisma_migrate_shadow_db_${globalThis.crypto.randomUUID()}`
     await conn.executeScript(`CREATE DATABASE "${database}"`)
 
-    // PATCH: client type and logQueries
-    return new PrismaPgAdapter(new pg.Pool({ ...this.config, database }) as StdClient, undefined, async () => {
+    // PATCH: Bemi options
+    const adapter = new PrismaPgAdapter(new pg.Pool({ ...this.config, database }), undefined, async () => {
       await conn.executeScript(`DROP DATABASE "${database}"`)
       // Note: no need to call dispose here. This callback is run as part of dispose.
-    }, {logQueries: this.logQueries})
+    })
+    adapter.logQueries = this.logQueries
+    adapter.injectSqlInContext = this.injectSqlInContext
+    return adapter
     // PATCH: end
   }
 }

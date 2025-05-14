@@ -1,5 +1,15 @@
 # Changelog
 
+#### [v1.0.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.9.0...v1.0.0) - 2025-05-26
+
+- **Breaking change**: Use `new PrismaPg()` & `withBemiExtension()` explicitly instead of `withPgAdapter()`
+- **Breaking change**: Use `bemiMiddleware()` instead of `setContext()` for setting context as a middleware
+- **Breaking change**: Use `setBemiContext()` instead of `bemiContext()` for setting context inline
+- **Breaking change**: Make SQL query injection into context optional and disabled by default (see `injectSqlInContext` option)
+- Add `mergeBemiContext()` to merge context with the existing one
+- Add `currentBemiContext()` to get the current context
+- Fix migration generation to work with PostgreSQL tables containing dashes in their names
+
 #### [v0.9.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.8.1...v0.9.0) - 2025-05-12
 
 - Make the package compatible with Prisma v6.7+

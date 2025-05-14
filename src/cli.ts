@@ -39,7 +39,7 @@ BEGIN
       'CREATE OR REPLACE TRIGGER _bemi_row_trigger_%s_%s
       BEFORE INSERT OR UPDATE OR DELETE ON %I.%I FOR EACH ROW
       EXECUTE FUNCTION _bemi_row_trigger_func()',
-      current_schemaname, current_tablename, current_schemaname, current_tablename
+      replace(current_tablename, '-', '_'), replace(current_tablename, '-', '_'), current_schemaname, current_tablename
     );
   END LOOP;
 END;

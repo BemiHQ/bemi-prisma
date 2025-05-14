@@ -1,17 +1,6 @@
-import type { SqlQuery } from '@prisma/driver-adapter-utils'
 import pg from 'pg'
 
 const SQL_COMMENT_AFFIX = process.env.BEMI_SQL_COMMENT_AFFIX || 'Bemi'
-
-export interface StdClient extends pg.Pool {
-  logQueries: boolean
-}
-
-export interface TransactionClient extends pg.PoolClient {
-  previousQueries: SqlQuery[]
-  logQueries: boolean
-  readyToExecuteTransaction?: boolean
-}
 
 export const EMPTY_RESULT = { rowCount: null, fields: [], command: '', oid: 0, rows: [] } as pg.QueryResult
 

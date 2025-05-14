@@ -1,9 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Request, Response, NextFunction } from "express";
 
-import { PrismaPgAdapterFactory } from './pg';
 import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
 import { logger } from './logger'
+
+export { PrismaPgAdapterFactory as PrismaPg } from './pg'
 
 const WRITE_OPERATIONS = ["create", "update", "upsert", "delete", "createMany", "updateMany", "deleteMany"]
 const EXECUTE_RAW_UNSAFE_OPERATION = ["$executeRawUnsafe"]
@@ -11,16 +12,13 @@ const EXECUTE_OPERATIONS = ["$executeRaw", EXECUTE_RAW_UNSAFE_OPERATION]
 const ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 const MAX_CONTEXT_SIZE = 1000000 // ~ 1MB
 
-export const withPgAdapter = <PrismaClientType>(
+export const withBemiExtension = <PrismaClientType>(
   originalPrisma: PrismaClientType,
-  { includeModels }: { includeModels?: string[] } = {},
+  { includeModels = undefined, injectSqlInContext = false }: { includeModels?: string[], injectSqlInContext?: boolean } = {},
 ): PrismaClientType => {
-  const { logQueries } = (originalPrisma as any)._engineConfig
-
   const prisma = (originalPrisma as any).$extends({
     query: {
       async $allOperations({ args, query, operation, model }: any) {
-
         // Not included model
         if (model && includeModels && !includeModels.includes(model)) {
           return query(args)
@@ -43,7 +41,7 @@ export const withPgAdapter = <PrismaClientType>(
         }
 
         // There is no context or it's not an object
-        const context = ASYNC_LOCAL_STORAGE.getStore()
+        const context = currentBemiContext()
         if (!context || context.constructor !== Object) return query(args)
 
         // Context is too large
@@ -62,22 +60,29 @@ export const withPgAdapter = <PrismaClientType>(
     },
   })
 
-  let connectionString;
-  if (prisma._engineConfig.overrideDatasources.db?.url) {
-    connectionString = prisma._engineConfig.overrideDatasources.db.url;
-  } else {
-    const {url} = prisma._engineConfig.inlineDatasources.db;
-    connectionString = url.value || process.env[url.fromEnvVar];
-  }
-
-  prisma._engineConfig.adapter = new PrismaPgAdapterFactory({ connectionString }, undefined, { logQueries })
+  const { logQueries } = (originalPrisma as any)._engineConfig
   prisma._engineConfig.logQueries = false
+  prisma._engineConfig.adapter.logQueries = logQueries
+  prisma._engineConfig.adapter.injectSqlInContext = injectSqlInContext
 
   return prisma as PrismaClientType
 }
 
+export const currentBemiContext = () => {
+  return ASYNC_LOCAL_STORAGE.getStore();
+}
+
+export const setBemiContext = (context: any) => {
+  ASYNC_LOCAL_STORAGE.enterWith(context);
+}
+
+export const mergeBemiContext = (context: any) => {
+  const currentContext = currentBemiContext() || {};
+  setBemiContext({ ...currentContext, ...context });
+}
+
 // Next.js
-export const setContext = (callback: (req: Request) => any) => {
+export const bemiMiddleware = (callback: (req: Request) => any) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     const context = callback(req);
 
@@ -92,12 +97,7 @@ export const BemiApolloServerPlugin = (callback: (requestContext: any) => any) =
   return {
     async requestDidStart(requestContext: any) {
       const context = callback(requestContext);
-      ASYNC_LOCAL_STORAGE.enterWith(context);
+      setBemiContext(context);
     },
   }
-}
-
-// Other
-export const bemiContext = (context: any) => {
-  ASYNC_LOCAL_STORAGE.enterWith(context);
 }

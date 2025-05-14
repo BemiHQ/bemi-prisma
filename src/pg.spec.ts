@@ -1,4 +1,4 @@
-import { PrismaPgAdapter } from './pg'
+import { PgTransaction } from './pg'
 import { contextToSqlComment } from './pg-utils'
 
 const CONTEXT = {
@@ -18,8 +18,9 @@ const QUERIES = {
 
 const callMockedPgAdapater = async (queries: string[]) => {
   const query = jest.fn(() => Promise.resolve({}))
-  const client = { query, previousQueries: [] }
-  const pgAdapter = new PrismaPgAdapter(client as any)
+  const client = { query }
+  const pgAdapter = new PgTransaction(client as any, {} as any)
+  pgAdapter.injectSqlInContext = true
 
   for(const sql of queries) {
     await pgAdapter['performIO']({ sql, args: [], argTypes: [] })

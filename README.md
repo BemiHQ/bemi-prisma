@@ -73,23 +73,24 @@ npm install @bemi-db/prisma
 Enable native [Node.js PostgreSQL adapter](https://github.com/brianc/node-postgres) for your Prisma client by wrapping it into `withPgAdapter`
 
 ```ts
-import { withPgAdapter } from "@bemi-db/prisma";
+import { PrismaPg, withBemiExtension } from "@bemi-db/prisma";
 import { PrismaClient } from '@prisma/client';
 
-const prisma = withPgAdapter(new PrismaClient());
+const adapter = PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = withBemiExtension(new PrismaClient({ adapter }));
 ```
 
 Add an [Express](https://expressjs.com/) middleware to pass application context with automatically tracked database changes
 
 ```ts
-import { setContext } from "@bemi-db/prisma";
+import { bemiMiddleware } from "@bemi-db/prisma";
 import express, { Request } from "express";
 
 const app = express();
 
 app.use(
-  // Customizable context
-  setContext((req: Request) => ({
+  bemiMiddleware((req: Request) => ({
+    // Customizable context
     userId: req.user?.id,
     endpoint: req.url,
     params: req.body,
