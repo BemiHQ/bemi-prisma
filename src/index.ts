@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Request, Response, NextFunction } from "express";
+import { bindAdapter } from "@prisma/driver-adapter-utils";
 
 import { PrismaPgAdapterFactory } from './pg';
 import { isContextComment, isWriteQuery, contextToSqlComment } from './pg-utils'
@@ -70,7 +71,9 @@ export const withPgAdapter = <PrismaClientType>(
     connectionString = url.value || process.env[url.fromEnvVar];
   }
 
-  prisma._engineConfig.adapter = new PrismaPgAdapterFactory({ connectionString }, undefined, { logQueries })
+  const adapterFactory = new PrismaPgAdapterFactory({ connectionString }, undefined, { logQueries })
+  prisma._engine.adapterPromise = adapterFactory.connect().then(bindAdapter)
+  prisma._engineConfig.adapter = adapterFactory
   prisma._engineConfig.logQueries = false
 
   return prisma as PrismaClientType
