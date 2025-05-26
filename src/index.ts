@@ -101,3 +101,13 @@ export const BemiApolloServerPlugin = (callback: (requestContext: any) => any) =
     },
   }
 }
+
+// T3 Stack
+export const bemiTRPCMiddleware = (t: any, callback: (opts: any) => any) => {
+  return t.middleware((opts: any) => {
+    const context = callback(opts);
+    return ASYNC_LOCAL_STORAGE.run(context, () => {
+      return opts.next();
+    });
+  })
+}

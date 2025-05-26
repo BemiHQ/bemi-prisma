@@ -1,6 +1,6 @@
 {
   "name": "@bemi-db/prisma",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Automatic data change tracking for Prisma",
   "main": "dist/index.js",
   "module": "./dist/index.mjs",

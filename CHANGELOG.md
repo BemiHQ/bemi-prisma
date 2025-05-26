@@ -1,5 +1,9 @@
 # Changelog
 
+#### [v1.1.0](https://github.com/BemiHQ/bemi-prisma/compare/v1.0.0...v1.1.0) - 2025-05-27
+
+- Add `bemiTRPCMiddleware` for setting up Bemi context in tRPC apps
+
 #### [v1.0.0](https://github.com/BemiHQ/bemi-prisma/compare/v0.9.0...v1.0.0) - 2025-05-26
 
 - **Breaking change**: Use `new PrismaPg()` & `withBemiExtension()` explicitly instead of `withPgAdapter()`
